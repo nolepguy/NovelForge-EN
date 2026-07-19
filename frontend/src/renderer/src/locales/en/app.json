@@ -1,0 +1,70 @@
+{
+  "app": {
+    "workflow": {
+      "loadingName": "Loading...",
+      "unnamed": "Untitled Workflow",
+      "triggerWorkflow": "Triggered Workflow",
+      "illegalStateTransition": "Illegal state transition: {from} -> {to}. Allowed transitions: {allowed}"
+    },
+    "update": {
+      "detectionFailed": "Detection failed",
+      "checkFailed": "Update check failed",
+      "githubRateLimited": "GitHub API access restricted (403). You may have reached the rate limit for unauthenticated users. Please try again later.",
+      "githubApiError": "GitHub API returned error: {status}",
+      "requestTimeout": "Request timed out"
+    },
+    "project": {
+      "fetchListFailed": "Failed to fetch project list",
+      "createSuccess": "Project created successfully!",
+      "createFailed": "Failed to create project: {error}",
+      "updateSuccess": "Project updated successfully!",
+      "updateFailed": "Failed to update project: {error}",
+      "deleteReservedWarning": "System reserved project cannot be deleted",
+      "deleteSuccess": "Project deleted successfully!",
+      "deleteFailed": "Failed to delete project: {error}"
+    },
+    "request": {
+      "validationField": "Field '{field}': {message}",
+      "validationFailedTitle": "Input validation failed",
+      "validationUnknownError": "An unknown validation error occurred",
+      "requestFailed": "Request failed"
+    },
+    "generation": {
+      "emptyResponse": "Response body is empty",
+      "failed": "Generation failed"
+    },
+    "assistant": {
+      "sessionDeleted": "Session deleted",
+      "deleteSessionFailed": "Failed to delete session",
+      "confirmDeleteSession": "Are you sure you want to delete this conversation?",
+      "confirmDeleteTitle": "Confirm Delete"
+    },
+    "llm": {
+      "fetchConfigsFailed": "Failed to load LLM config list"
+    },
+    "prompt": {
+      "fetchPromptsFailed": "Failed to load prompt list"
+    },
+    "assistant": {
+      "sessionDeleted": "Session deleted",
+      "deleteSessionFailed": "Failed to delete session",
+      "confirmDeleteSession": "Are you sure you want to delete this conversation?",
+      "confirmDeleteTitle": "Confirm Delete",
+      "newConversation": "New Conversation",
+      "justNow": "Just now",
+      "minutesAgo": "{n} minutes ago",
+      "hoursAgo": "{n} hours ago",
+      "daysAgo": "{n} days ago",
+      "uncategorized": "Uncategorized",
+      "toolCallFailed": "Tool call failed",
+      "executionFailed": "Execution failed",
+      "taskCompleted": "Task Completed",
+      "callingTool": "Calling tool: {name}",
+      "tool": "tool"
+    },
+    "layout": {
+      "section": "Section",
+      "basicInfo": "Basic Info"
+    }
+  }
+}

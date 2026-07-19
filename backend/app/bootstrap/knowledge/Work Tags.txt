@@ -1,0 +1,115 @@
+﻿```
+This knowledge base is primarily used for rendering work tag data. You may add or remove entries freely (keep the format consistent). Annotations may be added after options; annotations are not rendered on the frontend UI but are sent to the large model to help it understand.
+```
+
+- Theme Tags
+    - Fantasy & Magic
+        - Eastern Fantasy
+        - Otherworld Continents
+        - High Martial Arts World
+        - Dynasty Conquest
+        - Western Fantasy
+    - Science Fiction
+        - Interstellar Civilization
+        - Mecha & Ancient Martial Arts
+        - Post-Apocalyptic Crisis
+        - Time-Space Travel
+    - Wuxia & Xianxia
+        - Classical Xianxia
+        - Cultivation Civilization
+        - Primordial God-Sealing
+        - Fantasy Cultivation
+        - Traditional Wuxia
+        - Fantasy Wuxia
+    - Urban
+        - Urban High Martial Arts
+        - Business Wars
+        - Entertainment & Celebrities
+        - Rural Life
+        - Feng Shui Masters
+    - History
+        - Alternate History
+        - Historical Time Travel
+        - Industrial Revolution
+    - Game
+        - Holographic Online Games
+        - Game Otherworld
+        - Data Avatar
+    - Suspense
+        - Detective & Deduction
+        - Eerie Tales
+        - Tomb Raiding & Adventure
+        - Rule-Based Horror
+
+- Target Audience
+    - General
+    - Male
+    - Female
+
+- Narrative Person
+    - First Person
+    - Third Person
+
+- Category Tags
+    - Action
+    - Adult
+    - Adventure
+    - Comedy
+    - Drama
+    - Ecchi
+    - Fantasy
+    - Gender Bender
+    - Harem
+    - Historical
+    - Horror
+    - Josei
+    - Martial Arts
+    - Mature
+    - Mecha
+    - Mystery
+    - Psychological
+    - Romance
+    - School Life
+    - Sci-fi
+    - Seinen
+    - Shoujo
+    - Shoujo Ai
+    - Shounen
+    - Shounen Ai
+    - Slice of Life
+    - Smut
+    - Sports
+    - Supernatural
+    - Tragedy
+    - Wuxia
+    - Xianxia
+    - Xuanhuan
+    - Yaoi
+    - Yuri
+
+- Affection Tags
+    - No Pairing
+    - Single Heroine
+    - Single Hero
+    - Multiple Heroines
+    - Multiple Heroes
+    - Pure Love
+    - Childhood Sweethearts
+    - Reverse Harem
+    - Love Triangle
+    - Slow Burn
+    - Enemies to Lovers
+    - Fake Relationship
+    - Reincarnated Lovers
+    - Arranged Marriage
+    - Second Chance Romance
+    - One-Sided Love
+    - Forbidden Love
+    - Crossdressing
+    - Childhood Friends
+    - Best Friends to Lovers
+    - Contract Marriage
+    - Memory Loss Romance
+    - Reunion Romance
+    - Star-Crossed Lovers
+    - Polyamory

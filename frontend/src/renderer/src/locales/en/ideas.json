@@ -1,0 +1,8 @@
+{
+  "ideas": {
+    "transferToProject": "Move/Copy to Project",
+    "targetProject": "Target project",
+    "targetParentOptional": "Target parent (optional)",
+    "searchFreeCards": "Search free card titles..."
+  }
+}

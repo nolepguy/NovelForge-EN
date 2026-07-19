@@ -1,0 +1,69 @@
+# 数据库相关
+backend/*.db
+backend/**/*.db
+
+# Python缓存
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Python虚拟环境
+venv/
+env/
+.venv/
+.env/
+
+# Alembic相关
+backend/alembic/versions/*.py
+!backend/alembic/versions/__init__.py
+
+# 忽略所有md文档，除了README
+*.md
+!README.md
+!README.MD
+!CLA.md
+!贡献指南.md
+!后续规划.md
+!rules/**/*.md
+!rules/**/*.mdc
+
+
+primitive_models/
+docs/
+.pytest_cache/
+
+.windsurf/
+.windsurfrules
+.agent/
+.kiro/
+
+# IDE配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+.env
+
+# 日志文件
+*.log
+*.log.*
+
+# 临时文件
+*.tmp
+*.temp 
+
+backend/migrate_db.py
+backend/dist
+backend/build
+*.spec
+*.sh
+*.mako
+
+# Node modules
+node_modules/

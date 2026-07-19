@@ -1,0 +1,86 @@
+# ============================================================
+# AI Debate Test Workflow
+# ============================================================
+# Function: Test the progress reporting and resume-from-checkpoint of the AI.Debate node
+# Topic: Is money omnipotent
+#
+# Node description:
+# 1. Logic.SelectProject - Select a project (a project must be created in the system first)
+# 2. AI.Debate - Execute the debate asynchronously (3 rounds, each side speaks once per round)
+# 3. Logic.Wait - Wait for the debate to complete
+# 4. Card.Create - Create two cards to save the debate results
+# ============================================================
+
+#@node(description="1. Select a project (please change project_id to your actual project ID)")
+project = Logic.SelectProject(project_id=11)
+#</node>
+
+
+#@node(async=true, description="2. AI Debate: Is money omnipotent (executed asynchronously)")
+debate = AI.Debate(
+    topic="Is money omnipotent",
+    context="This is a classic philosophical debate topic. Please analyze it in depth from multiple angles, including the material level, the spiritual level, social relations, etc.",
+    max_rounds=3,
+    agent_1_name="Affirmative (Money is omnipotent)",
+    agent_1_system_prompt="You are the affirmative debater, arguing that money is omnipotent. You need to: 1. List the various problems money can solve 2. Emphasize the importance of money in modern society 3. Support your viewpoint with concrete cases. Keep your logic rigorous and your arguments sufficient.",
+    agent_1_llm_config=5,
+    agent_2_name="Negative (Money is limited)",
+    agent_2_system_prompt="You are the negative debater, arguing that money is not omnipotent. You need to: 1. Point out problems money cannot solve (such as true love, health, time, etc.) 2. Emphasize the importance of spiritual values 3. Refute the opponent with concrete cases. Keep your logic rigorous and your arguments sufficient.",
+    agent_2_llm_config=5,
+    temperature=0.8,
+    max_tokens=3000
+  )
+#</node>
+
+
+#@node(description="3. Wait for the debate to complete (must wait for the async node)")
+wait_debate = Logic.Wait(tasks=debate)
+#</node>
+
+
+#@node(description="4. Format the complete debate log as text")
+format_full_log = Logic.Expression(
+    expression="'\\n\\n'.join([f\"=== Round {log['round']} - {log['role']} ===\\n\\n[Thought]\\n{log['thought']}\\n\\n[Speech]\\n{log['content']}\" for log in debate.full_log]) if wait_debate.count > 0 else 'Debate not completed'"
+  )
+#</node>
+
+
+#@node(description="5. Format the debate summary as text")
+format_summary = Logic.Expression(
+    expression="f\"Debate topic: Is money omnipotent\\n\\nSummary:\\n{debate.summary}\\n\\nFull conversation log:\\n\\n\" + '\\n\\n'.join([f\"{msg['role']}:\\n{msg['content']}\" for msg in debate.history]) if wait_debate.count > 0 else 'Debate not completed'"
+  )
+#</node>
+
+
+#@node(description="6. Create card 1: complete debate log (including the thought process)")
+card_full_log = Card.Create(
+    project_id=project.project_id,
+    card_type="Chapter Text",
+    title="AI Debate Full Log - Is Money Omnipotent",
+    content={
+      "volume_number": 0,
+      "stage_number": 1,
+      "title": "AI Debate Full Log - Is Money Omnipotent",
+      "chapter_number": 1,
+      "entity_list": [],
+      "content": format_full_log.result
+    }
+  )
+#</node>
+
+
+#@node(description="7. Create card 2: debate summary (public speeches only)")
+card_summary = Card.Create(
+    project_id=project.project_id,
+    card_type="Chapter Text",
+    title="AI Debate Summary - Is Money Omnipotent",
+    content={
+      "volume_number": 0,
+      "stage_number": 1,
+      "title": "AI Debate Summary - Is Money Omnipotent",
+      "chapter_number": 2,
+      "entity_list": [],
+      "content": format_summary.result
+    }
+  )
+#</node>

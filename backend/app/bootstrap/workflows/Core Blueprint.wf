@@ -1,0 +1,85 @@
+# Workflow: Core Blueprint
+# Function: When the core blueprint is saved, batch-create volumes, character cards, and scene cards
+# Trigger: Automatically triggered when a core blueprint card is saved
+
+#@node(description="Trigger: listen for core blueprint card save")
+trigger = Trigger.CardSaved(card_type="Core Blueprint")
+#</node>
+
+
+#@node(description="Read the core blueprint")
+blueprint = Card.Read(card_id=trigger.card_id)
+#</node>
+
+
+#@node(description="Generate the volume list (using an expression node)")
+volumes = Logic.Expression(
+    expression="[{'index': i} for i in range(1, (blueprint.content.volume_count or 0) + 1)]"
+  )
+#</node>
+
+
+#@node(async=true, description="Batch-create volume outlines (async)")
+vol_cards = Card.BatchUpsert(
+    project_id=trigger.project_id,
+    card_type="Volume Outline",
+    title_template="Volume {item.index}",
+    content_template={"volume_number": "{item.index}"},
+    match_by="title",
+    items=volumes.result
+  )
+#</node>
+
+
+#@node(description="Extract the character list")
+characters = Logic.Expression(
+    expression="blueprint.content.character_cards or []"
+  )
+#</node>
+
+
+#@node(async=true, description="Batch-create character cards (async)")
+char_cards = Card.BatchUpsert(
+    project_id=trigger.project_id,
+    parent_id=trigger.card_id,
+    card_type="Character Card",
+    title_template="{item.name}",
+    match_by="title",
+    items=characters.result
+  )
+#</node>
+
+
+#@node(description="Extract the scene list")
+scenes = Logic.Expression(
+    expression="blueprint.content.scene_cards or []"
+  )
+#</node>
+
+
+#@node(async=true, description="Batch-create scene cards (async)")
+scene_cards = Card.BatchUpsert(
+    project_id=trigger.project_id,
+    parent_id=trigger.card_id,
+    card_type="Scene Card",
+    title_template="{item.name}",
+    match_by="title",
+    items=scenes.result
+  )
+#</node>
+
+
+#@node(description="Wait for all async tasks to complete")
+wait_result = Logic.Wait(tasks=[vol_cards, char_cards, scene_cards])
+#</node>
+
+
+#@node(description="Clear the source lists")
+update_result = Card.Update(
+    card_id=trigger.card_id,
+    content_merge={
+      "character_cards": [],
+      "scene_cards": []
+    }
+  )
+#</node>

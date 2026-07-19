@@ -1,0 +1,65 @@
+## Instruction Flow Generation Spec
+
+You need to generate content using the instruction-flow approach. The instruction flow allows you to freely mix natural-language reasoning with JSON instructions, building the target data structure step by step.
+
+## Available Instructions
+
+1. **Set Field Value**
+   ```json
+   {"op":"set","path":"<path>","value":<value>}
+   ```
+   - **Supports flexible assignment granularity**:
+     - **Full object assignment**: For simply-structured or standard nested objects, you may directly assign a complete object.
+       Example: `{"op":"set","path":"/config","value":{"theme":"dark","lang":"zh"}}`
+     - **Fine-grained field assignment**: For nested objects with complex structure that require step-by-step reasoning or contain long text, it is recommended to set subfields one by one.
+       Example: `{"op":"set","path":"/world_view/core_conflict","value":"Resource competition"}`
+   - Path format: JSON Pointer (e.g., `/name`, `/world_view/social_system/power_structure`)
+   - Value type: supports string, number, boolean, object, array (overwrite mode)
+   - **Note on array assignment**: When setting an array-type field, be sure to include the `value` key.
+     - Correct: `{"op":"set", "path":"/tags", "value":["hot-blooded", "fantasy"]}`
+     - Incorrect: `{"op":"set", "path":"/tags", ["hot-blooded", "fantasy"]}` (missing value key)
+
+2. **Append Element to Array**
+   ```json
+   {"op":"append","path":"<array path>","value":<element>}
+   ```
+   - Used to add elements to an array one by one, suitable for list-item generation
+   - Example: `{"op":"append","path":"/hobbies","value":"reading"}`
+   - **Note**: For Tuple-type arrays (usually with a fixed length and types), prefer using the `set` instruction with an index path (such as `/tags/0`), or directly `set` the full array.
+
+3. **Generation Complete**
+   ```json
+   {"op":"done"}
+   ```
+   - Indicates that all required fields have been generated; the system will automatically verify completeness.
+
+## Best Practices and Strategy
+
+1. **Mixing Reasoning and Action**
+   - Make full use of natural language to express your reasoning process; this helps improve generation quality and also lets the user understand your line of thought.
+   - Pattern: `reasoning` -> `one or more instructions` -> `continue reasoning...`
+
+2. **Strategy for Handling Complex Nested Types**
+   - **Step-by-step construction**: When encountering complex nested structures (such as worldview, detailed settings), do not try to generate a huge JSON object in a single instruction. It is error-prone and hard to read.
+   - **Recommended approach**: Use fine-grained paths to assign values one by one.
+     ```
+     Let me design the core conflict of the worldview...
+     {"op":"set", "path":"/world_view/core_conflict", "value":"..."}
+     Next is the social system...
+     {"op":"set", "path":"/world_view/social_system/power_structure", "value":"..."}
+     ```
+
+3. **Interaction and Feedback**
+   - You may ask the user questions to obtain key preferences, but within the scope allowed by the task description.
+   - After each wave of instructions is executed, the user interface will update in real time, maintaining the rhythm of generation.
+
+## Strict Format Requirements
+
+- **JSON Format**: Instructions must be valid single-line JSON objects; do not wrap instructions in Markdown code blocks.
+- **Path Accuracy**: Ensure that the JSON Pointer paths are consistent with the target Schema structure.
+- **Type Matching**: The generated values must conform to the types defined by the Schema (e.g., enum, type limits).
+
+- **Explicitly Assign Default Values**: Even if a field has a default value (such as an empty list, a default option), **you must also explicitly generate a set/append instruction to assign it**.
+  - Reason: to clearly express the AI's intent and to overwrite possibly outdated default values in the backend.
+  - For example: if `tags` defaults to `[]`, you should also output `{"op":"set", "path":"/tags", "value":[]}` to confirm that no tags are indeed needed.
+- **End Marker**: After the task is complete, be sure to output `{"op":"done"}`.

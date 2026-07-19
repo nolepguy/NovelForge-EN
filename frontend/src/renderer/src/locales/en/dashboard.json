@@ -1,0 +1,33 @@
+{
+  "dashboard": {
+    "title": "Project Management",
+    "fetchProjects": "Fetch projects",
+    "createProject": "Create Project",
+    "openProject": "Open Project",
+    "noProjects": "No projects yet",
+    "noProjectsTip": "Create a new project to start writing",
+    "deleteProject": "Delete Project",
+    "confirmDeleteProject": "Are you sure you want to delete project \"{name}\"? This action will permanently delete the project and all its content, and cannot be undone.",
+    "searchPlaceholder": "Search projects (match by name/description)",
+    "myBookshelf": "My Bookshelf",
+    "heroSubtitle": "Gather your worlds and stories, spark every inspiration here",
+    "startCreating": "Start Creating",
+    "sortCreatedDesc": "By created time (newest first)",
+    "sortCreatedAsc": "By created time (oldest first)",
+    "sortNameAsc": "By name A-Z",
+    "sortNameDesc": "By name Z-A",
+    "noMatchProjects": "No matching projects. Try creating a new one!",
+    "newProject": "New Project",
+    "noDescription": "No description",
+    "confirmDelete": "Confirm Delete",
+    "editProject": "Edit Project",
+    "projectName": "Project Name",
+    "projectDescription": "Project Description",
+    "projectTemplate": "Project Template",
+    "selectTemplatePlaceholder": "Select a project template (optional)",
+    "blankProject": "Blank Project",
+    "nameRequired": "Please enter a project name",
+    "loadTemplatesFailed": "Failed to load project templates",
+    "fillRequiredFields": "Please fill in the required form fields"
+  }
+}

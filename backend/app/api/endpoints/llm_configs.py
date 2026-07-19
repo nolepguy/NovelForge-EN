@@ -1,0 +1,172 @@
+from datetime import datetime
+from typing import List
+
+import httpx
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session
+
+from app.db.session import get_session
+from app.schemas.llm_config import (
+    LLMConfigCreate,
+    LLMConfigRead,
+    LLMConfigUpdate,
+    LLMCapabilityTestRequest,
+    LLMCapabilityTestResult,
+    LLMConnectionTest,
+    LLMGetModelsRequest,
+)
+from app.schemas.response import ApiResponse
+from app.services import llm_config_service
+from app.services.ai.core.chat_model_factory import build_chat_model_from_payload
+from app.services.ai.core.llm_capability_probe import run_capability_test
+
+
+router = APIRouter()
+
+
+@router.post("/", response_model=ApiResponse[LLMConfigRead])
+def create_llm_config_endpoint(config_in: LLMConfigCreate, session: Session = Depends(get_session)):
+    if config_in.display_name is None or config_in.display_name == "":
+        config_in.display_name = config_in.model_name
+    config = llm_config_service.create_llm_config(session=session, config_in=config_in)
+    return ApiResponse(data=config)
+
+
+@router.get("/", response_model=ApiResponse[List[LLMConfigRead]])
+def get_llm_configs_endpoint(session: Session = Depends(get_session)):
+    configs = llm_config_service.get_llm_configs(session=session)
+    return ApiResponse(data=configs)
+
+
+@router.put("/{config_id}", response_model=ApiResponse[LLMConfigRead])
+def update_llm_config_endpoint(config_id: int, config_in: LLMConfigUpdate, session: Session = Depends(get_session)):
+    config = llm_config_service.update_llm_config(session=session, config_id=config_id, config_in=config_in)
+    if not config:
+        raise HTTPException(status_code=404, detail="LLM Config not found")
+    return ApiResponse(data=config)
+
+
+@router.delete("/{config_id}", response_model=ApiResponse)
+def delete_llm_config_endpoint(config_id: int, session: Session = Depends(get_session)):
+    success = llm_config_service.delete_llm_config(session=session, config_id=config_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="LLM Config not found")
+    return ApiResponse(message="LLM Config deleted successfully")
+
+
+@router.post("/get-models", response_model=ApiResponse[List[str]], summary="Get the model list")
+async def get_models_endpoint(request: LLMGetModelsRequest):
+    provider = (request.provider or "").lower()
+    models: list[str] = []
+
+    try:
+        if provider in {"openai_compatible", "openai"}:
+            transport = llm_config_service.resolve_transport_settings(
+                provider=provider,
+                api_base=request.api_base,
+                api_protocol=request.api_protocol,
+                models_path=request.models_path,
+                user_agent=request.user_agent,
+            )
+            if not transport["models_url"]:
+                raise ValueError("Missing api_base; cannot fetch the model list")
+
+            headers = {
+                "Authorization": f"Bearer {request.api_key}",
+                "Content-Type": "application/json",
+                **transport["default_headers"],
+            }
+            async with httpx.AsyncClient() as client:
+                response = await client.get(transport["models_url"], headers=headers, timeout=10.0)
+                response.raise_for_status()
+                data = response.json()
+                if "data" in data and isinstance(data["data"], list):
+                    models = [item["id"] for item in data["data"] if "id" in item]
+
+        elif provider == "google":
+            if request.api_key:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        f"https://generativelanguage.googleapis.com/v1beta/models?key={request.api_key}",
+                        timeout=10.0,
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    if "models" in data and isinstance(data["models"], list):
+                        models = [m["name"].replace("models/", "") for m in data["models"] if "name" in m]
+
+        return ApiResponse(data=models)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to fetch model list: {str(e)}")
+
+
+@router.post("/test", response_model=ApiResponse, summary="Test LLM connection")
+async def test_llm_connection_endpoint(connection_data: LLMConnectionTest):
+    """Build a ChatModel with a temporary transport config and perform a minimal call."""
+    try:
+        model = build_chat_model_from_payload(
+            provider=connection_data.provider,
+            model_name=connection_data.model_name,
+            api_key=connection_data.api_key,
+            api_base=connection_data.api_base,
+            api_protocol=connection_data.api_protocol,
+            custom_request_path=connection_data.custom_request_path,
+            user_agent=connection_data.user_agent,
+        )
+        await model.ainvoke("ping")
+        return ApiResponse(message="Connection successful")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Connection test failed: {e}")
+
+
+@router.post("/capability-test", response_model=ApiResponse[LLMCapabilityTestResult], summary="LLM capability test")
+async def capability_test_endpoint(request: LLMCapabilityTestRequest, session: Session = Depends(get_session)):
+    try:
+        result = await run_capability_test(request)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Capability test failed: {exc}")
+
+    basic_chat = (result.get("tests") or {}).get("basic_chat") or {}
+    recommended = result.get("recommended_mode") or {}
+    repaired_with_user_agent = bool(recommended.get("use_default_user_agent") and recommended.get("recommended_user_agent"))
+    should_save_result = request.save_result and basic_chat.get("status") == "pass" and (not request.try_repair or repaired_with_user_agent)
+    if should_save_result and request.config_id is not None:
+        config = llm_config_service.get_llm_config(session=session, config_id=request.config_id)
+        if not config:
+            raise HTTPException(status_code=404, detail="LLM Config not found")
+
+        config.capability_summary = {
+            "overall": result.get("overall"),
+            "tests": result.get("tests"),
+            "tags": result.get("tags") or [],
+            "summary": result.get("summary"),
+            "recommended_mode": recommended,
+            "repair_notes": result.get("repair_notes") or [],
+        }
+        config.recommended_assistant_mode = recommended.get("assistant_mode") or "auto"
+        config.disable_stream = bool(recommended.get("disable_stream", False))
+        if recommended.get("api_protocol") in {"chat_completions", "responses"}:
+            config.api_protocol = recommended["api_protocol"]
+        if recommended.get("use_default_user_agent") and recommended.get("recommended_user_agent"):
+            config.user_agent = recommended["recommended_user_agent"]
+        config.capability_last_checked_at = datetime.now()
+        session.add(config)
+        session.commit()
+
+    return ApiResponse(data=result)
+
+
+@router.post("/{config_id}/reset-usage", response_model=ApiResponse, summary="Reset statistics (input/output tokens and call count)")
+def reset_llm_usage(config_id: int, session: Session = Depends(get_session)):
+    ok = llm_config_service.reset_usage(session, config_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="LLM Config not found")
+    return ApiResponse(message="Usage reset")
+
+
+@router.post("/{config_id}/copy", response_model=ApiResponse[LLMConfigRead], summary="Copy an LLM config")
+def copy_llm_config_endpoint(config_id: int, session: Session = Depends(get_session)):
+    config = llm_config_service.copy_llm_config(session=session, config_id=config_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="LLM Config not found")
+    return ApiResponse(data=config, message="LLM Config copied successfully")

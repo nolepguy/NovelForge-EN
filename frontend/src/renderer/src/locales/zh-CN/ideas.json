@@ -1,0 +1,8 @@
+{
+  "ideas": {
+    "transferToProject": "移动/复制到项目",
+    "targetProject": "目标项目",
+    "targetParentOptional": "目标父级（可选）",
+    "searchFreeCards": "搜索自由卡标题..."
+  }
+}

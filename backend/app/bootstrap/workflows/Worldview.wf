@@ -1,0 +1,44 @@
+# Workflow: Worldview
+# Function: When a worldview setting card is saved, automatically extract the organization list and batch-create organization cards
+# Trigger: Automatically triggered when a worldview setting card is saved
+
+#@node(description="Trigger: listen for worldview setting card save")
+trigger = Trigger.CardSaved(card_type="Worldview Setting")
+#</node>
+
+
+#@node(description="Read the current card")
+card = Card.Read(card_id=trigger.card_id)
+#</node>
+
+
+#@node(description="Use an expression node to extract the organization list")
+organizations = Logic.Expression(
+    expression="card.content.world_view.social_system.major_power_camps or []"
+  )
+#</node>
+
+
+#@node(description="Batch-create organization cards (the parent card is the current worldview card)")
+org_cards = Card.BatchUpsert(
+    project_id=trigger.project_id,
+    parent_id=trigger.card_id,
+    card_type="Organization Card",
+    title_template="{item.name}",
+    items=organizations.result
+  )
+#</node>
+
+
+#@node(description="Clear the source list (to avoid duplicate creation)")
+update_result = Card.Update(
+    card_id=trigger.card_id,
+    content_merge={
+      "world_view": {
+        "social_system": {
+          "major_power_camps": []
+        }
+      }
+    }
+  )
+#</node>

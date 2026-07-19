@@ -1,0 +1,70 @@
+{
+  "app": {
+    "workflow": {
+      "loadingName": "加载中...",
+      "unnamed": "未命名工作流",
+      "triggerWorkflow": "触发器工作流",
+      "illegalStateTransition": "非法状态转换: {from} -> {to}. 允许的转换: {allowed}"
+    },
+    "update": {
+      "detectionFailed": "检测失败",
+      "checkFailed": "更新检测失败",
+      "githubRateLimited": "GitHub API 访问受限 (403)，可能已达到未登录用户的速率限制，请稍后重试",
+      "githubApiError": "GitHub API 返回错误: {status}",
+      "requestTimeout": "请求超时"
+    },
+    "project": {
+      "fetchListFailed": "获取项目列表失败",
+      "createSuccess": "项目创建成功！",
+      "createFailed": "创建项目失败: {error}",
+      "updateSuccess": "项目更新成功！",
+      "updateFailed": "更新项目失败: {error}",
+      "deleteReservedWarning": "系统保留项目不可删除",
+      "deleteSuccess": "项目删除成功！",
+      "deleteFailed": "删除项目失败: {error}"
+    },
+    "request": {
+      "validationField": "字段 '{field}': {message}",
+      "validationFailedTitle": "输入校验失败",
+      "validationUnknownError": "发生了一个未知的校验错误",
+      "requestFailed": "请求失败"
+    },
+    "generation": {
+      "emptyResponse": "响应体为空",
+      "failed": "生成失败"
+    },
+    "assistant": {
+      "sessionDeleted": "已删除会话",
+      "deleteSessionFailed": "删除会话失败",
+      "confirmDeleteSession": "确定要删除这个对话吗？",
+      "confirmDeleteTitle": "确认删除"
+    },
+    "llm": {
+      "fetchConfigsFailed": "获取LLM配置列表失败"
+    },
+    "prompt": {
+      "fetchPromptsFailed": "获取提示词列表失败"
+    },
+    "assistant": {
+      "sessionDeleted": "已删除会话",
+      "deleteSessionFailed": "删除会话失败",
+      "confirmDeleteSession": "确定要删除这个对话吗？",
+      "confirmDeleteTitle": "确认删除",
+      "newConversation": "新对话",
+      "justNow": "刚刚",
+      "minutesAgo": "{n}分钟前",
+      "hoursAgo": "{n}小时前",
+      "daysAgo": "{n}天前",
+      "uncategorized": "未分类",
+      "toolCallFailed": "工具调用失败",
+      "executionFailed": "执行失败",
+      "taskCompleted": "任务已完成",
+      "callingTool": "正在调用工具: {name}",
+      "tool": "工具"
+    },
+    "layout": {
+      "section": "分区",
+      "basicInfo": "基础信息"
+    }
+  }
+}

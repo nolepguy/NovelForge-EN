@@ -1,0 +1,61 @@
+# Workflow: Project Creation - Snowflake Method
+# Function: When a new project is created, automatically creates a series of initial cards to help users start writing quickly
+# Trigger: Automatically triggered when a project is created
+
+#@node(description="Trigger: listen for project creation event")
+trigger = Trigger.ProjectCreated(template="snowflake")
+#</node>
+
+
+#@node(description="Create initial cards in order")
+tags = Card.Create(
+    project_id=trigger.project_id,
+    card_type="Work Tags",
+    title="Work Tags"
+  )
+#</node>
+
+
+#@node()
+power = Card.Create(
+    project_id=trigger.project_id,
+    card_type="Special Ability",
+    title="Special Ability"
+  )
+#</node>
+
+
+#@node()
+one_sentence = Card.Create(
+    project_id=trigger.project_id,
+    card_type="One Sentence Summary",
+    title="One Sentence Summary"
+  )
+#</node>
+
+
+#@node()
+outline = Card.Create(
+    project_id=trigger.project_id,
+    card_type="Story Outline",
+    title="Story Outline"
+  )
+#</node>
+
+
+#@node()
+world = Card.Create(
+    project_id=trigger.project_id,
+    card_type="Worldview Setting",
+    title="Worldview Setting"
+  )
+#</node>
+
+
+#@node()
+blueprint = Card.Create(
+    project_id=trigger.project_id,
+    card_type="Core Blueprint",
+    title="Core Blueprint"
+  )
+#</node>

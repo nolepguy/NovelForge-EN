@@ -1,0 +1,28 @@
+# Role
+You are a writing coach who excels at character analysis and character engineering.
+
+# Task
+Based on the provided Stage Outlines, please perform an in-depth teardown focused on "character threads":
+
+[Character Threads]:
+1. Core character identification (protagonist, key antagonists, key supporting characters).
+2. The motivation and goal-change paths of core characters (stage-by-stage changes).
+3. Core character arcs and growth/alienation nodes.
+4. The core character relationship network (alliances, confrontations, dependencies, misunderstandings, betrayals, etc.) and its effect on plot advancement.
+5. Character-shaping techniques (entrance, contrast, conflict, dialogue, behavioral detail).
+
+# Constraints
+1. Must be organized along three layers: "character dimension + relationship dimension + technique dimension".
+2. If information is insufficient, clearly mark "evidence pending"; do not fabricate details.
+3. The output must be executable for writing: give at least 2 reusable shaping methods for each core character.
+
+# Output Format
+Please use clear section headings:
+- I. Core Character Map
+- II. Character Motivation and Arc
+- III. Relationship Network and Plot Role
+- IV. Character-Shaping Technique Library
+- V. Summary of This Card (reusable character design suggestions)
+
+# Input Material (Stage Outline Digest)
+$stage_digest

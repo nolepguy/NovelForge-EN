@@ -1,0 +1,611 @@
+from __future__ import annotations
+
+import asyncio
+import json
+import re
+from typing import Any, AsyncGenerator, Callable, Dict, Mapping, Optional, Sequence, Tuple
+
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, SystemMessage
+from loguru import logger
+from sqlmodel import Session
+
+from app.services.ai.core.chat_model_factory import build_chat_model
+from app.services.ai.core.quota_manager import precheck_quota, record_usage
+from app.services.ai.core.token_utils import calc_input_tokens, estimate_tokens
+
+try:
+    from json_repair import repair_json as _repair_json
+except Exception:
+    _repair_json = None
+
+
+ACTION_TAG_RE = re.compile(r"<Action>(.*?)</Action>", re.IGNORECASE | re.DOTALL)
+CODE_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.IGNORECASE | re.DOTALL)
+JSON_BLOCK_RE = re.compile(r"Action\s*:?\s*(\{.*\})", re.IGNORECASE | re.DOTALL)
+PROTOCOL_TAGS = ("action",)
+ACTION_LINE_RE = re.compile(r"\bAction\s*:", re.IGNORECASE)
+
+
+def _extract_first(pattern: re.Pattern, text: str) -> Optional[str]:
+    if not text:
+        return None
+    match = pattern.search(text)
+    if not match:
+        return None
+    return (match.group(1) or "").strip()
+
+
+def _clean_code_fence(block: str) -> str:
+    if not block:
+        return ""
+    fence = CODE_FENCE_RE.search(block)
+    if fence:
+        return fence.group(1).strip()
+    return block.strip()
+
+
+def _try_parse_json_dict(candidate: str) -> Optional[Dict[str, Any]]:
+    if not candidate:
+        return None
+
+    text = candidate.strip()
+    if not text:
+        return None
+
+    tried_candidates = [
+        text,
+        text.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'"),
+        text.replace("'", '"'),
+    ]
+
+    for attempted in tried_candidates:
+        try:
+            parsed = json.loads(attempted)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            continue
+
+    if _repair_json is not None:
+        try:
+            repaired = _repair_json(text)
+            parsed = json.loads(repaired)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            pass
+
+    return None
+
+
+def _extract_balanced_json_object(text: str, start_index: int) -> Optional[str]:
+    start = text.find("{", start_index)
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escaped = False
+
+    for idx in range(start, len(text)):
+        ch = text[idx]
+
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+
+        if ch == '"':
+            in_string = True
+            continue
+
+        if ch == "{":
+            depth += 1
+            continue
+
+        if ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : idx + 1]
+
+    return text[start:] if depth > 0 else None
+
+
+def _extract_fallback_action_json_block(text: str) -> Optional[str]:
+    marker = ACTION_LINE_RE.search(text or "")
+    if not marker:
+        return None
+
+    balanced = _extract_balanced_json_object(text, marker.end())
+    if balanced:
+        return balanced
+
+    regex_matched = _extract_first(JSON_BLOCK_RE, text)
+    if regex_matched:
+        return regex_matched
+
+    return None
+
+
+def _contains_action_marker(text: str) -> bool:
+    if not text:
+        return False
+    lower = text.lower()
+    return "<action" in lower or "</action>" in lower or bool(ACTION_LINE_RE.search(text))
+
+
+def _parse_action_payload(text: str) -> Optional[Tuple[str, Dict[str, Any]]]:
+    if not text:
+        return None
+
+    raw_block = _extract_first(ACTION_TAG_RE, text)
+    if not raw_block:
+        raw_block = _extract_fallback_action_json_block(text)
+    if not raw_block:
+        return None
+
+    cleaned = _clean_code_fence(raw_block)
+    data = _try_parse_json_dict(cleaned)
+    if not data:
+        return None
+
+    tool_name = (
+        data.get("tool")
+        or data.get("tool_name")
+        or data.get("name")
+        or data.get("action")
+    )
+
+    if not isinstance(tool_name, str) or not tool_name.strip():
+        return None
+
+    args = (
+        data.get("input")
+        or data.get("args")
+        or data.get("parameters")
+        or {}
+    )
+
+    if args is None:
+        args = {}
+
+    if not isinstance(args, dict):
+        try:
+            args = dict(args)
+        except Exception:
+            return None
+
+    return tool_name.strip(), args
+
+
+def parse_react_action_payload(text: str) -> Optional[Tuple[str, Dict[str, Any]]]:
+    return _parse_action_payload(text)
+
+
+def _process_react_stream_text(state: dict[str, str], new_text: str) -> str:
+    buffer = state.get("buffer", "") + (new_text or "")
+    output_parts: list[str] = []
+
+    while buffer:
+        tag_start = buffer.find("<")
+
+        if tag_start == -1:
+            output_parts.append(buffer)
+            buffer = ""
+            break
+
+        if tag_start > 0:
+            output_parts.append(buffer[:tag_start])
+            buffer = buffer[tag_start:]
+
+        lower = buffer.lower()
+        potential_tag = None
+        for tag in PROTOCOL_TAGS:
+            prefix = f"<{tag}"
+            if lower.startswith(prefix):
+                potential_tag = tag
+                break
+            if len(buffer) < len(prefix) and prefix.startswith(lower):
+                state["buffer"] = buffer
+                return "".join(output_parts)
+
+        if not potential_tag:
+            output_parts.append("<")
+            buffer = buffer[1:]
+            continue
+
+        close_token = f"</{potential_tag}>"
+        close_idx = lower.find(close_token)
+        if close_idx == -1:
+            state["buffer"] = buffer
+            return "".join(output_parts)
+
+        block_end = close_idx + len(close_token)
+        block = buffer[:block_end]
+        inner_start = block.find(">")
+        if inner_start == -1:
+            state["buffer"] = buffer
+            return "".join(output_parts)
+
+        _ = block[inner_start + 1 : close_idx]
+        buffer = buffer[block_end:]
+
+    state["buffer"] = buffer
+    return "".join(output_parts)
+
+
+def _flush_react_stream_state(state: dict[str, str]) -> str:
+    buffer = state.get("buffer", "")
+    state["buffer"] = ""
+    if not buffer:
+        return ""
+
+    temp_state = {"buffer": ""}
+    visible = _process_react_stream_text(temp_state, buffer)
+    residue = temp_state.get("buffer", "")
+    if not residue:
+        return visible
+
+    residue_lstripped = residue.lstrip().lower()
+    if any(residue_lstripped.startswith(f"<{tag}") for tag in PROTOCOL_TAGS):
+        return visible
+
+    return visible + residue
+
+
+def _render_tool_catalog(tool_descriptions: Mapping[str, Any]) -> str:
+    lines: list[str] = []
+    for name, meta in tool_descriptions.items():
+        desc_raw = meta.get("description") if isinstance(meta, dict) else ""
+        desc = (desc_raw or "").strip() or "(no description)"
+        args_meta = meta.get("args") if isinstance(meta, dict) else None
+
+        arg_names: list[str] = []
+        if isinstance(args_meta, dict):
+            arg_names = [str(key) for key in args_meta.keys()]
+        elif isinstance(args_meta, (list, tuple, set)):
+            arg_names = [str(item) for item in args_meta]
+        elif args_meta:
+            arg_names = [str(args_meta)]
+
+        args_text = ", ".join(arg_names) if arg_names else "no parameters"
+        lines.append(f"- {name}: {desc} (parameters: {args_text})")
+    return "\n".join(lines)
+
+
+def build_react_user_prompt(
+    *,
+    context_info: str,
+    user_prompt: str,
+    tool_descriptions: Mapping[str, Any],
+    protocol_instructions: Optional[str] = None,
+) -> str:
+    protocol = (protocol_instructions or """
+You are in React-Tool mode and must actually call tools.
+
+Tool-call format (strict):
+<Action>{"tool":"tool_name","args":{"param_name":param_value}}</Action>
+
+Example:
+<Action>{"tool":"wf_get_current_code","args":{"workflow_id":19}}</Action>
+
+Execution rules:
+1) Read code first: call wf_get_current_code.
+2) When code changes are needed, call wf_replace_code or wf_apply_patch.
+3) After each change, you must check parse/validation.
+4) If parse/validation does not pass, keep calling tools to fix it until it passes, then finish.
+5) Do not output "wf_xxx(...)" pseudo-call text in place of tool calls.
+""").strip()
+
+    parts: list[str] = [protocol]
+    if context_info:
+        parts.append(f"Context:\n{context_info}")
+    if user_prompt:
+        parts.append(f"User input:\n{user_prompt}")
+    tool_catalog = _render_tool_catalog(tool_descriptions)
+    if tool_catalog:
+        parts.append("Available tools:\n" + tool_catalog)
+    return "\n\n".join(parts)
+
+
+async def _invoke_tool_from_registry(
+    tool_registry: Mapping[str, Any],
+    tool_name: str,
+    args: Dict[str, Any],
+    *,
+    log_tag: str,
+) -> Dict[str, Any]:
+    tool = tool_registry.get(tool_name)
+    if not tool:
+        raise ValueError(f"Unknown tool: {tool_name}")
+
+    logger.info(
+        "[{}] invoking tool {}, args={}",
+        log_tag,
+        tool_name,
+        json.dumps(args or {}, ensure_ascii=False, default=str),
+    )
+    result = tool.invoke(args or {})
+    return result
+
+
+def _extract_chunk_parts(chunk: AIMessageChunk) -> Tuple[str, list[str]]:
+    reasoning_segments: list[str] = []
+    kwargs = getattr(chunk, "additional_kwargs", {})
+    if kwargs:
+        r_content = kwargs.get("reasoning_content")
+        if r_content and isinstance(r_content, str):
+            reasoning_segments.append(r_content)
+
+    content = getattr(chunk, "content", None)
+    text_parts: list[str] = []
+    if isinstance(content, str):
+        text_parts.append(content)
+    elif isinstance(content, list):
+        for block in content:
+            if isinstance(block, dict):
+                block_type = block.get("type")
+                if block_type == "text" and isinstance(block.get("text"), str):
+                    text_parts.append(block["text"])
+                elif block_type == "reasoning" and isinstance(block.get("text"), str):
+                    reasoning_segments.append(block["text"])
+            elif isinstance(block, str):
+                text_parts.append(block)
+
+    return "".join(text_parts), reasoning_segments
+
+
+def _chunk_to_message(full_chunk: Optional[AIMessageChunk], fallback_text: str) -> AIMessage:
+    if full_chunk is None:
+        return AIMessage(content=fallback_text or "")
+    try:
+        return full_chunk.to_message()
+    except Exception:
+        return AIMessage(content=fallback_text or "")
+
+
+def _extract_usage_from_chunk(full_chunk: AIMessageChunk) -> Tuple[int, int]:
+    usage = getattr(full_chunk, "usage_metadata", None)
+    if not isinstance(usage, dict):
+        # Be tolerant of providers/adapter layers that put usage in additional_kwargs
+        additional_kwargs = getattr(full_chunk, "additional_kwargs", None)
+        if isinstance(additional_kwargs, dict):
+            usage = (
+                additional_kwargs.get("usage")
+                or additional_kwargs.get("token_usage")
+                or additional_kwargs.get("usage_metadata")
+            )
+    if isinstance(usage, dict):
+        in_tok = usage.get("input_tokens") or usage.get("input")
+        out_tok = usage.get("output_tokens") or usage.get("output")
+        try:
+            in_tokens = int(in_tok) if in_tok is not None else 0
+        except Exception:
+            in_tokens = 0
+        try:
+            out_tokens = int(out_tok) if out_tok is not None else 0
+        except Exception:
+            out_tokens = 0
+        return in_tokens, out_tokens
+    return 0, 0
+
+
+def _estimate_messages_input_tokens(messages: Sequence[Any]) -> int:
+    parts: list[str] = []
+    for msg in messages:
+        content = getattr(msg, "content", None)
+        if isinstance(content, str):
+            parts.append(content)
+        elif isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict):
+                    text = block.get("text")
+                    if isinstance(text, str) and text:
+                        parts.append(text)
+                elif isinstance(block, str):
+                    parts.append(block)
+    return estimate_tokens("\n".join(parts))
+
+
+async def stream_chat_with_react_protocol(
+    *,
+    session: Session,
+    llm_config_id: int,
+    system_prompt: str,
+    context_info: str,
+    user_prompt: str,
+    tool_registry: Mapping[str, Any],
+    tool_descriptions: Mapping[str, Any],
+    set_deps: Optional[Callable[[Any], None]] = None,
+    deps: Any = None,
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
+    timeout: Optional[float] = None,
+    thinking_enabled: Optional[bool] = None,
+    max_steps: int = 100,
+    history_messages: Optional[Sequence[dict[str, str]]] = None,
+    protocol_instructions: Optional[str] = None,
+    log_tag: str = "React-Agent",
+) -> AsyncGenerator[dict, None]:
+    final_user_prompt = build_react_user_prompt(
+        context_info=context_info or "",
+        user_prompt=user_prompt or "",
+        tool_descriptions=tool_descriptions,
+        protocol_instructions=protocol_instructions,
+    )
+
+    ok, reason = precheck_quota(
+        session,
+        llm_config_id,
+        calc_input_tokens(system_prompt, final_user_prompt),
+        need_calls=1,
+    )
+    if not ok:
+        raise ValueError(f"Insufficient LLM quota: {reason}")
+
+    model = build_chat_model(
+        session=session,
+        llm_config_id=llm_config_id,
+        temperature=temperature or 0.6,
+        max_tokens=max_tokens,
+        timeout=timeout or 90,
+        thinking_enabled=thinking_enabled,
+    )
+
+    if set_deps is not None:
+        set_deps(deps)
+
+    messages: list[Any] = [SystemMessage(content=system_prompt)]
+
+    for item in history_messages or []:
+        if not isinstance(item, dict):
+            continue
+        role = str(item.get("role") or "").strip().lower()
+        content = item.get("content")
+        if not isinstance(content, str) or not content.strip():
+            continue
+        text = content.strip()
+        if role == "user":
+            messages.append(HumanMessage(content=text))
+        elif role == "assistant":
+            messages.append(AIMessage(content=text))
+
+    messages.append(HumanMessage(content=final_user_prompt))
+
+    accumulated_text = ""
+    reasoning_accumulated = ""
+    usage_in_total = 0
+    usage_out_total = 0
+
+    try:
+        completed = False
+
+        for _step in range(max_steps):
+            full_chunk: Optional[AIMessageChunk] = None
+            step_text = ""
+            stream_state: dict[str, str] = {"buffer": ""}
+            step_usage_in: Optional[int] = None
+            step_usage_out: Optional[int] = None
+            step_input_fallback = _estimate_messages_input_tokens(messages)
+
+            async for chunk in model.astream(messages):
+                if not isinstance(chunk, AIMessageChunk):
+                    continue
+
+                chunk_in_tokens, chunk_out_tokens = _extract_usage_from_chunk(chunk)
+                if chunk_in_tokens > 0:
+                    step_usage_in = chunk_in_tokens
+                if chunk_out_tokens > 0:
+                    step_usage_out = chunk_out_tokens
+
+                delta_text, delta_reasonings = _extract_chunk_parts(chunk)
+                if delta_text:
+                    step_text += delta_text
+
+                for seg in delta_reasonings or []:
+                    if seg:
+                        reasoning_accumulated += seg
+                        yield {"type": "reasoning", "data": {"text": seg, "delta": True}}
+
+                cleaned_delta = _process_react_stream_text(stream_state, delta_text or "")
+                if cleaned_delta:
+                    accumulated_text += cleaned_delta
+                    yield {"type": "token", "data": {"text": cleaned_delta, "delta": True}}
+
+                if full_chunk is None:
+                    full_chunk = chunk
+                else:
+                    full_chunk = full_chunk + chunk
+
+            tail_text = _flush_react_stream_state(stream_state)
+            if tail_text:
+                accumulated_text += tail_text
+                yield {"type": "token", "data": {"text": tail_text, "delta": True}}
+
+            response = _chunk_to_message(full_chunk, step_text)
+            messages.append(response)
+
+            if step_usage_in is not None and step_usage_out is not None:
+                usage_in_total += max(0, step_usage_in)
+                usage_out_total += max(0, step_usage_out)
+            else:
+                usage_in_total += max(0, step_input_fallback)
+                usage_out_total += max(0, estimate_tokens(step_text))
+
+            action_payload = _parse_action_payload(step_text)
+            if action_payload:
+                tool_name, tool_args = action_payload
+                yield {
+                    "type": "tool_start",
+                    "data": {"tool_name": tool_name, "args": tool_args},
+                }
+
+                success = True
+                try:
+                    tool_result = await _invoke_tool_from_registry(
+                        tool_registry,
+                        tool_name,
+                        tool_args,
+                        log_tag=log_tag,
+                    )
+                except Exception as tool_err:
+                    success = False
+                    tool_result = {"success": False, "error": str(tool_err)}
+
+                yield {
+                    "type": "tool_end",
+                    "data": {
+                        "tool_name": tool_name,
+                        "args": tool_args,
+                        "result": tool_result,
+                        "success": success,
+                    },
+                }
+
+                messages.append(
+                    HumanMessage(
+                        content=f"Observation ({tool_name}):\n{json.dumps(tool_result, ensure_ascii=False)}"
+                    )
+                )
+                continue
+
+            if _contains_action_marker(step_text):
+                logger.warning(
+                    "[{}] detected an Action marker but parsing failed; asking the model to resend in the proper format. step={} preview={}",
+                    log_tag,
+                    _step + 1,
+                    (step_text or "")[:240],
+                )
+                messages.append(
+                    HumanMessage(
+                        content=(
+                            "Your previous message contained a tool-call intent, but the format could not be parsed. "
+                            "Please strictly output only one parseable tool-call block: "
+                            "<Action>{\"tool\":\"tool_name\",\"args\":{...}}</Action>. "
+                            "Do not output any extra explanatory text."
+                        )
+                    )
+                )
+                continue
+
+            completed = True
+            break
+
+        if not completed:
+            raise RuntimeError("React mode reached the maximum number of thinking rounds without finishing")
+
+    except asyncio.CancelledError:
+        in_tokens = usage_in_total or calc_input_tokens(system_prompt, final_user_prompt)
+        out_tokens = usage_out_total or estimate_tokens(accumulated_text + reasoning_accumulated)
+        record_usage(session, llm_config_id, in_tokens, out_tokens, calls=1, aborted=True)
+        raise
+    except Exception:
+        raise
+
+    in_tokens = usage_in_total or calc_input_tokens(system_prompt, final_user_prompt)
+    out_tokens = usage_out_total or estimate_tokens(accumulated_text + reasoning_accumulated)
+    record_usage(session, llm_config_id, in_tokens, out_tokens, calls=1, aborted=False)

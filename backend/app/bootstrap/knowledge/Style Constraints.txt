@@ -1,0 +1,37 @@
+﻿### Style Constraints (strictly enforced)
+
+**1. Language Style**
+- Sentences should be concise, sharp, easy to understand, with no filler content.
+- Use short sentences with a smooth rhythm.
+- Lively and witty language, with appropriate use of playful banter or internet memes.
+- Appropriate exaggeration and reversals to create comedic moments.
+- Writing techniques that appeal to web-novel readers.
+- Everyday colloquial language, even occasional profanity, may be used for a down-to-earth writing style.
+
+**2. Forbidden AI-common Words & Tropes (IMPORTANT!)**
+
+Strictly forbidden from using AI-style cliched vocabulary and sentence patterns. The following are partial examples by category — please pay close attention when writing:
+[Description-class forbidden words]:
+Eyes/expression: a glint flashed in the eyes..., the corners of the mouth curled up, a slight raise of the eyebrow, grave expression, took a deep breath, twitching mouth, a flash of surprise in the eyes, deep gaze, torch-like gaze, sharp gaze, neither haughty nor humble, a half-smile, the corners of the mouth curved into an arc, pupils contracted, expressionless...
+Action/state: said slowly, flowing like clouds and water, cautiously, knuckles turning white, fists clenched, fingertips sensing touch, took a deep breath, footsteps halted, body stiffened, heart contracted violently, as if struck by lightning, like being hit by something...
+Atmosphere/environment: the air solidified, the temperature dropped a few degrees, dead silence, stillness, suffocating, surging waves, arcs of electricity flashing, exploding with a boom, air as heavy as iron...
+Cliched similes: mouth open wide enough to fit an egg, like a poisoned dagger, time seemed to have its pause button pressed, heavy as a thousand pounds, smashing onto the heart, like a stone thrown into a stream...
+[Logic/tone-class forbidden words]:
+Speculative words: seems, as if, appears, possibly, perhaps, probably, obviously, seems, looks like. (Not fully forbidden, but use sparingly)
+Emphasis words: absolutely, beyond doubt, of utmost importance, immeasurable, earth-shattering, unprecedented, unimaginable.
+Inner thoughts: a chill in the heart, suddenly understood, vaguely formed a guess, a calm heart, the heart sank to the bottom, not only... but also..., he knew, he realized.
+Common AI connectors/fillers: suddenly, gradually, immediately after, at this moment, replaced by, at this very moment, next, as, this kind of, a kind of, a wave of, a touch of, a little, slightly. (Not fully forbidden, but use sparingly)
+
+**3. Description Principles**
+- Absolutely no superfluous descriptions.
+- No abuse of similes; all similes must absolutely serve the plot or characterization — otherwise use direct description.
+- Reduce unnecessary decoration of environment, appearance, atmosphere, smells.
+- Avoid lengthy descriptions; highlight key actions.
+- Avoid overuse of parallel structures.
+- Emphasize the natural flow of emotional details; avoid over-decoration and complex sentence patterns.
+- Absolutely no cyberpunk-style wording or settings.
+
+**4. Dialogue Requirements**
+- Insert dialogue reasonably; dialogue must carry actual meaning and advance the plot.
+- Strong emotion — appropriately add natural, colloquial expressions.
+- Dialogue must fit the character's personality and writing style, and be consistent with the contextual logic.

@@ -1,0 +1,70 @@
+# Workflow: Stage Outline
+# Function: When a stage outline is saved, extract the chapter outline list and batch-create chapter outline cards and chapter text cards
+# Trigger: Automatically triggered when a stage outline card is saved
+
+#@node(description="Trigger: listen for stage outline card save")
+trigger = Trigger.CardSaved(card_type="Stage Outline")
+#</node>
+
+
+#@node(description="Read the stage outline")
+stage = Card.Read(card_id=trigger.card_id)
+#</node>
+
+
+#@node(description="Extract and enrich the chapter outline list")
+enriched_outlines = Logic.Expression(
+    expression="[{**outline, 'title': (str(outline.get('title') or '') if str(outline.get('title') or '').startswith('Chapter ' + str(outline.get('chapter_number')) + ' ') else ('Chapter ' + str(outline.get('chapter_number')) + ' ' + str(outline.get('title') or ''))), 'entity_list': (outline.get('entity_list') or []), 'volume_number': stage.content.volume_number, 'stage_number': stage.content.stage_number} for outline in stage.content.chapter_outline_list or []]"
+  )
+#</node>
+
+
+#@node(description="Validate that chapter numbers completely and continuously cover the range")
+validated_outlines = Logic.Expression(
+    expression="enriched_outlines.result if (stage.content.reference_chapter and len(stage.content.reference_chapter) == 2 and [int(item.get('chapter_number', -1)) for item in enriched_outlines.result] == list(range(int(stage.content.reference_chapter[0]), int(stage.content.reference_chapter[1]) + 1))) else []"
+  )
+#</node>
+
+
+#@node(async=true, description="Batch-create chapter outline cards (async)")
+outline_cards = Card.BatchUpsert(
+    project_id=trigger.project_id,
+    parent_id=trigger.card_id,
+    card_type="Chapter Outline",
+    title_template="{item.title}",
+    items=validated_outlines.result
+  )
+#</node>
+
+
+#@node(async=true, description="Batch-create chapter text cards (async)")
+content_cards = Card.BatchUpsert(
+    project_id=trigger.project_id,
+    parent_id=trigger.card_id,
+    card_type="Chapter Text",
+    title_template="{item.title}",
+    content_template={
+      "volume_number": "{item.volume_number}",
+      "stage_number": "{item.stage_number}",
+      "chapter_number": "{item.chapter_number}",
+      "title": "{item.title}",
+      "entity_list": "{item.entity_list}"
+    },
+    items=validated_outlines.result
+  )
+#</node>
+
+
+#@node(description="Wait for async tasks to complete")
+wait_result = Logic.Wait(tasks=[outline_cards, content_cards])
+#</node>
+
+
+#@node(description="Clear the outline list")
+update_result = Card.Update(
+    card_id=trigger.card_id,
+    content_merge={
+      "chapter_outline_list": []
+    }
+  )
+#</node>

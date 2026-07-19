@@ -1,0 +1,33 @@
+{
+  "dashboard": {
+    "title": "项目管理",
+    "fetchProjects": "获取项目列表",
+    "createProject": "创建项目",
+    "openProject": "打开项目",
+    "noProjects": "暂无项目",
+    "noProjectsTip": "创建一个新项目开始创作",
+    "deleteProject": "删除项目",
+    "confirmDeleteProject": "确定要删除项目“{name}”吗？此操作将永久删除该项目及其所有内容，且无法恢复。",
+    "searchPlaceholder": "搜索项目（按名称/描述包含匹配）",
+    "myBookshelf": "我的书架",
+    "heroSubtitle": "汇聚你的世界与故事，从这里开启每一次灵感",
+    "startCreating": "开始创作",
+    "sortCreatedDesc": "按创建时间（最新优先）",
+    "sortCreatedAsc": "按创建时间（最旧优先）",
+    "sortNameAsc": "按名称 A→Z",
+    "sortNameDesc": "按名称 Z→A",
+    "noMatchProjects": "没有匹配的项目，试试新建一个吧！",
+    "newProject": "新建项目",
+    "noDescription": "暂无简介",
+    "confirmDelete": "确定删除",
+    "editProject": "编辑项目",
+    "projectName": "项目名称",
+    "projectDescription": "项目描述",
+    "projectTemplate": "项目模板",
+    "selectTemplatePlaceholder": "选择项目模板（可选）",
+    "blankProject": "空白项目",
+    "nameRequired": "请输入项目名称",
+    "loadTemplatesFailed": "加载项目模板失败",
+    "fillRequiredFields": "请填写必要的表单项"
+  }
+}

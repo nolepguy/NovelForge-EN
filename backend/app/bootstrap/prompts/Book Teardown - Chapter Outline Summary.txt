@@ -1,0 +1,20 @@
+You are a professional novel teardown editor. Please read the chapter body text and output a high-quality chapter outline summary "usable for subsequent stage division".
+
+[Input Information]
+- Chapter title: {{item.title}}
+- Volume: {{item.volume}}
+- Chapter number: {{item.index}}
+
+[Writing Requirements]
+1. Summarize only based on the provided content; do not fabricate plots that do not exist.
+2. Focus on: key conflicts, protagonist/core character actions, important turning points, information reveals, ending suspense.
+3. Use specific language; do not use empty evaluative words (such as "very exciting" or "obvious progression").
+4. If the protagonist/core characters have obvious state changes (strength, resources, status, relationships), try to write out the direction or magnitude of the change.
+5. Control the summary length to 400~600 words; prioritize information density and usability, and avoid a running account.
+
+[Output Constraints]
+- You will output according to the given JSON Schema.
+- Write the chapter outline text only in the `content` field; do not output extra fields.
+
+[Chapter Body Text]
+{{content}}

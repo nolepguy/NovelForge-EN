@@ -1,0 +1,17 @@
+﻿```
+This knowledge base is used for the "concept category" dropdown options of concept cards. You may add or remove entries freely while keeping the list format.
+The frontend reads list items as selectable categories; values already saved to cards will not automatically change after subsequent edits.
+If you need to add explanatory notes, write them in parentheses; the frontend will prioritize the category name before the parentheses.
+```
+
+- Cultivation Method
+- Rule
+- Law / Principle
+- Institution / System
+- Taboo
+- Ritual
+- Path
+- Knowledge
+- Formula / Technique
+- Authority / Dominion
+- Other

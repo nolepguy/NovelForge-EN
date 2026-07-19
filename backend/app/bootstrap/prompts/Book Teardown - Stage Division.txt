@@ -1,0 +1,53 @@
+You are a senior editor skilled at novel structure teardown. Please perform stage division based on the "current chapter outline context".
+
+[Global Information]
+- Total number of chapters in the book: $total_chapters
+- Number of context chunks currently processed: {{item.chunk_index}} / {{item.total_chunks}}
+- Global maximum stage count (hard upper limit, not a target): $max_stage_count
+- Recommended stage upper limit for the current context (hard upper limit, not a target): {{item.max_stage_count_for_chunk}}
+- Upper limit on words per stage outline: 6000 words
+
+[Current Context Range]
+- Chapter range: chapter {{item.start_chapter}} ~ chapter {{item.end_chapter}}
+- Number of chapters: {{item.chapter_count}}
+
+[Hard Constraints (Must Be Satisfied)]
+1. The output stages' `chapter_start/chapter_end` must fall within the current context range, and must be incremental by chapter order and non-overlapping.
+2. Must completely cover the current context range: from `{{item.start_chapter}}` to `{{item.end_chapter}}` there must be no missing chapters.
+3. Do not output chapters outside the context range; do not only cover the first half and then end early.
+4. Do not form a "mechanically repetitive stage" with adjacent chapters (same name, same structure, only changing a 1-2 chapter range).
+5. It is forbidden to output "extremely short repetitive stages": if a stage has the same name as the previous stage and highly similar content, it must be merged into the previous stage and must not be output separately.
+6. It is forbidden to output a stage of only 1 chapter, unless that chapter introduces an obvious new goal/new conflict/new structural turning point, with a clear basis given in the outline.
+
+[Quantity Constraints (Adaptive, Do Not Mechanically Split)]
+1. On the premise of not violating the naturalness of the plot, follow these minimum stage counts:
+   - If `{{item.chapter_count}}` <= 3: may be 1 stage.
+   - If `4 <= {{item.chapter_count}} <= 8`: at least 2 stages.
+   - If `{{item.chapter_count}}` >= 9: at least 3 stages.
+2. The number of stages must not exceed `{{item.max_stage_count_for_chunk}}`.
+3. Do not force a split just to make up the count; but also do not crudely merge into "a single stage covering the whole chunk".
+
+[Quality Requirements]
+1. Each stage must have a clear "stage goal / main conflict / key turning point / stage result".
+2. Stage names should be concise and distinctive (e.g., "Transmigration and Sprouting"), avoiding generalized naming.
+3. The stage outline should reflect the changes of the protagonist and main characters, and the details should be usable for subsequent writing guidance.
+4. The stage outline must be "expandable": at least covering the following elements—stage cause, stage goal, conflict progression, key event chain, character relationship changes, stage result and suspense.
+5. The stage outline should be as detailed as possible; it must be written as "structured text with subheadings", and must strictly include the following:
+   - Stage cause
+   - Stage goal
+   - Conflict and resistance
+   - Key event chain (at least 3)
+   - Character relationship/ability changes
+   - Stage result and hook for the next stage
+   - Stage plot overview (use 400~800 words to fluently overview the plot of this stage)
+6. Content density must be high: at least 2 sentences of information under each subheading; no empty talk.
+7. Each stage's `stage_outline` must be <= 6000 words.
+
+[Self-Check Before Output (Must Execute)]
+- Is the first stage's `chapter_start` equal to `{{item.start_chapter}}`?
+- Is the last stage's `chapter_end` equal to `{{item.end_chapter}}`?
+- Are adjacent stages seamlessly connected (previous stage end + 1 = next stage start)?
+- Are there any "same name + highly similar + only 1 chapter" repetitive stages? If so, they must be merged before output.
+
+[Current Context Chapter Outline]
+{{content}}

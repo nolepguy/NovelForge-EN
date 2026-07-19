@@ -1,0 +1,17 @@
+﻿```
+This knowledge base is used for the "item category" dropdown options of item cards. You may add or remove entries freely while keeping the list format.
+The frontend reads list items as selectable categories; values already saved to cards will not automatically change after subsequent edits.
+If you need to add explanatory notes, write them in parentheses; the frontend will prioritize the category name before the parentheses.
+```
+
+- Weapon
+- Magic Treasure
+- Token
+- Resource
+- Contract
+- Vehicle
+- Material
+- Data / Documents
+- Currency
+- Anomalous Object
+- Other

@@ -1,0 +1,309 @@
+# Workflow: Book Teardown Workflow (refactored)
+# Goals:
+# 1) First extract chapter outlines and save them as "General Text" cards
+# 2) Perform candidate stage division per 80 chapters of context
+# 3) Merge into the final whole-book stages and generate stage cards (General Text)
+# 4) Generate global book-teardown analysis cards based on the stage outline (General Text)
+
+#@node(description="Select the target project to execute")
+project = Logic.SelectProject(project_id=10)
+#</node>
+
+
+#@node(description="Select the main model configuration for this flow (can be switched via the frontend dropdown)")
+llm = Logic.SelectLLM(llm_config_id=5)
+#</node>
+
+
+#@node(description="Scan the novel directory")
+novel = Novel.Load(
+    root_path="E:\\LLMProjects\\Novel Data\\My World",
+    file_pattern=".*\\.(txt|md)$",
+    volume_pattern="Volume\s+\d+",
+    chapter_pattern="Chapter\s+(\d+)"
+  )
+#</node>
+
+
+#@node(description="Set book-teardown runtime parameters (chunk size, stage upper limit, etc.)")
+settings = Logic.Expression(
+    expression="{'llm_config_id': llm.llm_config_id, 'chapter_chunk_size': 80, 'max_stage_count': 20, 'outline_concurrency': 30}"
+  )
+#</node>
+
+
+#@node(description="Load the \"Chapter Outline Summary\" prompt")
+chapter_outline_prompt = Prompt.Load(prompt_id="Book Teardown - Chapter Outline Summary")
+#</node>
+
+
+#@node(async=true, description="Asynchronously batch-extract chapter outlines")
+outline_results = AI.BatchStructured(
+    llm_config_id=settings.result.llm_config_id,
+    response_model_id="General Text",
+    prompt_template=chapter_outline_prompt.text,
+    use_instruction_flow=True,
+    concurrency=settings.result.outline_concurrency,
+    max_retries=3,
+    items=novel.chapter_list
+  )
+#</node>
+
+
+#@node(description="Wait for chapter outline extraction to complete")
+wait_outline = Logic.Wait(tasks=outline_results)
+#</node>
+
+
+#@node(description="Standardize chapter summaries (fill in the whole-book sequence number chapter_no)")
+chapter_outline_items = Logic.Expression(
+    expression="[{'chapter_no': idx + 1, 'title': item.meta.title if item.meta and 'title' in item.meta else f'Chapter {idx + 1}', 'volume': item.meta.volume if item.meta and 'volume' in item.meta else 'Uncategorized', 'path': item.meta.path if item.meta and 'path' in item.meta else '', 'outline': item.ai_result.content if item.ai_result and 'content' in item.ai_result else (json_stringify(item.ai_result) if item.ai_result else '')} for idx, item in enumerate(outline_results.results) if item and 'ai_result' in item and item.ai_result] if wait_outline.count > 0 else []"
+  )
+#</node>
+
+
+#@node(description="Split chapter summaries into chunks by chunk_size (default 80 chapters per chunk)")
+chapter_chunks = Logic.Expression(
+    expression="[{'chunk_index': idx + 1, 'total_chunks': (len(chapter_outline_items.result) + settings.result.chapter_chunk_size - 1) // settings.result.chapter_chunk_size, 'start_chapter': chunk[0].chapter_no, 'end_chapter': chunk[-1].chapter_no, 'chapter_count': len(chunk), 'max_stage_count_for_chunk': max(1, (settings.result.max_stage_count * len(chunk) + max(1, len(chapter_outline_items.result)) - 1) // max(1, len(chapter_outline_items.result))), 'content': '\\n\\n'.join([f\"{row.title}\\nVolume: {row.volume}\\nChapter Outline: {row.outline}\" for row in chunk])} for idx, chunk in enumerate([chapter_outline_items.result[i:i + settings.result.chapter_chunk_size] for i in range(0, len(chapter_outline_items.result), settings.result.chapter_chunk_size)])] if chapter_outline_items.result else []"
+  )
+#</node>
+
+
+#@node(description="Load the \"Chunk Stage Division\" prompt")
+stage_split_prompt = Prompt.Load(
+    prompt_id="Book Teardown - Stage Division",
+    variables={
+      "total_chapters": "${len(chapter_outline_items.result)}",
+      "max_stage_count": "${settings.result.max_stage_count}"
+    }
+  )
+#</node>
+
+
+#@node(async=true, description="Sequentially generate stage candidates (each chunk produces 1~N stages)")
+stage_chunk_results = AI.SequentialStructured(
+    llm_config_id=settings.result.llm_config_id,
+    response_model_id="BookStageChunkPlan",
+    prompt_template=stage_split_prompt.text,
+    temperature=0.6,
+    max_tokens=12000,
+    timeout=240,
+    max_retries=3,
+    use_instruction_flow=True,
+    fail_soft=True,
+    items=chapter_chunks.result
+  )
+#</node>
+
+
+#@node(description="Wait for stage candidates to complete")
+wait_stage_chunks = Logic.Wait(tasks=stage_chunk_results)
+#</node>
+
+
+#@node(description="Flatten into a whole-book stage candidate list")
+stage_candidates = Logic.Expression(
+    expression="[{'stage_name': stage.stage_name, 'chapter_start': stage.chapter_start, 'chapter_end': stage.chapter_end, 'stage_outline': stage.stage_outline, 'stage_summary': (stage.stage_summary if stage and 'stage_summary' in stage else None)} for chunk in stage_chunk_results.results if chunk and 'ai_result' in chunk and chunk.ai_result and 'stages' in chunk.ai_result for stage in chunk.ai_result.stages if stage and stage.chapter_start and stage.chapter_end] if wait_stage_chunks.count > 0 else []"
+  )
+#</node>
+
+
+#@node(description="Output candidate stages directly as final stages (keep the details extracted per chunk, no second rewrite)")
+final_stages = Logic.Expression(
+    expression="stage_candidates.result or []"
+  )
+#</node>
+
+
+#@node(description="Deduplicate and compress stages: merge adjacent duplicate same-name stages, suppress single-chapter duplicate fragments")
+final_stages_squashed = Logic.Expression(
+    expression="squash_adjacent_stages(final_stages.result)"
+  )
+#</node>
+
+
+#@node(description="Stage range normalization: ensure continuous coverage of 1..whole-book chapters (missing chapters merged into the previous stage)")
+final_stages_normalized = Logic.Expression(
+    expression="normalize_ranges(final_stages_squashed.result, start=1, end=len(chapter_outline_items.result))"
+  )
+#</node>
+
+
+#@node(description="Assemble stage card content (focus on the stage outline, no chapter source text attached)")
+stage_card_items = Logic.Expression(
+    expression="[{'stage_number': idx + 1, 'stage_name': stage.stage_name, 'chapter_start': stage.chapter_start, 'chapter_end': stage.chapter_end, 'stage_title': f\"Stage {idx + 1}: {stage.stage_name}\", 'content': f\"[Stage Name]\\n{stage.stage_name}\\n\\n[Chapter Range]\\nChapter {stage.chapter_start} - Chapter {stage.chapter_end}\\n\\n[Stage Plot Summary]\\n{(stage.stage_summary or '')}\\n\\n[Stage Outline]\\n{stage.stage_outline}\"} for idx, stage in enumerate(final_stages_normalized.result)] if final_stages_normalized.result else []"
+  )
+#</node>
+
+
+#@node(description="Create stage cards (General Text)")
+stage_cards = Card.BatchUpsert(
+    project_id=project.project_id,
+    card_type="General Text",
+    title_template="{item.stage_title}",
+    content_template={"content": "{item.content}"},
+    items=stage_card_items.result
+  )
+#</node>
+
+
+#@node(description="Build a stage title -> stage card ID mapping")
+stage_title_to_id = Logic.Expression(
+    expression="{card.title: card.id for card in stage_cards.cards or []}"
+  )
+#</node>
+
+
+#@node(description="Assemble the \"stage range -> parent card ID\" list")
+stage_ranges_with_parent = Logic.Expression(
+    expression="[{'chapter_start': stage.chapter_start, 'chapter_end': stage.chapter_end, 'parent_id': stage_title_to_id.result[stage.stage_title] if stage.stage_title in stage_title_to_id.result else None} for stage in stage_card_items.result if stage and stage.chapter_start and stage.chapter_end]"
+  )
+#</node>
+
+
+#@node(description="Match each chapter to its owning stage and inject the parent card ID")
+chapter_items_with_parent = Logic.Expression(
+    expression="[{'chapter_no': chapter.chapter_no, 'title': chapter.title, 'outline': chapter.outline, 'parent_id': ([range_item.parent_id for range_item in stage_ranges_with_parent.result if range_item.parent_id and chapter.chapter_no >= range_item.chapter_start and chapter.chapter_no <= range_item.chapter_end] or [None])[0]} for chapter in chapter_outline_items.result] if chapter_outline_items.result else []"
+  )
+#</node>
+
+
+#@node(description="Store chapter outline cards (General Text, attached under the corresponding stage)")
+chapter_outline_cards = Card.BatchUpsert(
+    project_id=project.project_id,
+    card_type="General Text",
+    title_template="{item.title}",
+    content_template={"content": "{item.outline}"},
+    parent_id="{item.parent_id}",
+    items=chapter_items_with_parent.result
+  )
+#</node>
+
+
+#@node(description="Aggregate stage materials for the global book-teardown analysis")
+stage_digest = Logic.Expression(
+    expression="'\\n\\n'.join([f\"Stage {idx + 1}: {stage.stage_name}\\nChapter Range: Chapter {stage.chapter_start} - Chapter {stage.chapter_end}\\n\\n[Stage Summary]\\n{(stage.stage_summary or '')}\\n\\n[Stage Outline]\\n{stage.stage_outline}\" for idx, stage in enumerate(final_stages_normalized.result)]) if final_stages_normalized.result else '(No stage data)'"
+  )
+#</node>
+
+
+#@node(description="Load the whole-book teardown prompt (basic profile / core settings / framework structure)")
+global_profile_prompt = Prompt.Load(
+    prompt_id="Book Teardown - Basic Framework",
+    variables={
+      "stage_digest": "$stage_digest.result"
+    }
+  )
+#</node>
+
+
+#@node(description="Load the whole-book teardown prompt (character threads)")
+global_character_prompt = Prompt.Load(
+    prompt_id="Book Teardown - Character Threads",
+    variables={
+      "stage_digest": "$stage_digest.result"
+    }
+  )
+#</node>
+
+
+#@node(description="Load the whole-book teardown prompt (technique library / action guide)")
+global_action_prompt = Prompt.Load(
+    prompt_id="Book Teardown - Techniques & Actions",
+    variables={
+      "stage_digest": "$stage_digest.result"
+    }
+  )
+#</node>
+
+
+#@node(async=true, description="Parallel-generate analysis text (basic profile / core settings / framework structure)")
+global_profile_analysis = AI.LLM(
+    llm_config_id=settings.result.llm_config_id,
+    user_prompt=global_profile_prompt.text,
+    temperature=0.6,
+    max_tokens=12000,
+    timeout=240,
+    max_retry=3
+  )
+#</node>
+
+
+#@node(async=true, description="Parallel-generate analysis text (character threads)")
+global_character_analysis = AI.LLM(
+    llm_config_id=settings.result.llm_config_id,
+    user_prompt=global_character_prompt.text,
+    temperature=0.6,
+    max_tokens=12000,
+    timeout=240,
+    max_retry=3
+  )
+#</node>
+
+
+#@node(async=true, description="Parallel-generate analysis text (technique library / action guide)")
+global_action_analysis = AI.LLM(
+    llm_config_id=settings.result.llm_config_id,
+    user_prompt=global_action_prompt.text,
+    temperature=0.6,
+    max_tokens=12000,
+    timeout=240,
+    max_retry=3
+  )
+#</node>
+
+
+#@node(description="Wait for the three-way whole-book teardown analysis to complete")
+wait_global_analyses = Logic.Wait(tasks=[global_profile_analysis, global_character_analysis, global_action_analysis])
+#</node>
+
+
+#@node(description="Aggregate analysis text (basic profile / core settings / framework structure)")
+global_profile_text = Logic.Expression(
+    expression="global_profile_analysis.response if wait_global_analyses.count >= 0 else ''"
+  )
+#</node>
+
+
+#@node(description="Aggregate analysis text (character threads)")
+global_character_text = Logic.Expression(
+    expression="global_character_analysis.response if wait_global_analyses.count >= 0 else ''"
+  )
+#</node>
+
+
+#@node(description="Aggregate analysis text (technique library / action guide)")
+global_action_text = Logic.Expression(
+    expression="global_action_analysis.response if wait_global_analyses.count >= 0 else ''"
+  )
+#</node>
+
+
+#@node(description="Save the whole-book teardown card (basic profile / core settings / framework structure)")
+global_profile_card = Card.Create(
+    project_id=project.project_id,
+    card_type="General Text",
+    title="Book Teardown - Basic Framework",
+    content={"content": global_profile_text.result}
+  )
+#</node>
+
+
+#@node(description="Save the whole-book teardown card (character threads)")
+global_character_card = Card.Create(
+    project_id=project.project_id,
+    card_type="General Text",
+    title="Book Teardown - Character Threads",
+    content={"content": global_character_text.result}
+  )
+#</node>
+
+
+#@node(description="Save the whole-book teardown card (technique library / action guide)")
+global_action_card = Card.Create(
+    project_id=project.project_id,
+    card_type="General Text",
+    title="Book Teardown - Techniques & Actions",
+    content={"content": global_action_text.result}
+  )
+#</node>

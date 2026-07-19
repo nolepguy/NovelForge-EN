@@ -1,0 +1,120 @@
+﻿## Naming Guide
+Goal: reduce piling-on and fake "grandiose" naming; generate names that are short, intuitive, and repeatable.
+---
+
+### Core Principles (in priority order)
+- Short and intuitive: 2-4 characters (Chinese) / 1-3 words (English) is ideal, max <=6; avoid multiple stacked modifiers.
+- One tone per thing: consistent with the genre's tone (classical / modern / sci-fi), no mixing.
+- Fixed grading: pick one grading system and stick with it throughout (see below).
+- Generic terms first: directly use "generic term + functional description" in-text when possible.
+
+---
+
+### Quick Usage (one-pass drafting)
+- Restate the function -> pick 1 structure from the templates -> fill in 1-2 information points.
+
+---
+
+### Template Library (fill in the blanks)
+- System / Panel
+  - [Audience/Goal] + System: Top-Student System, Tycoon System, Survival System
+  - [Direction] + Panel: Attribute Panel, Talent Panel, Skill Panel
+  - [Scene] + Simulator/Assistant/Compass: Battle Simulator, Farm Assistant
+  - [Mechanism] + (Value/Points/Log): Merit Value, Wish-Power Points, Task Log
+
+- Non-System Golden Fingers (Item / Fragment)
+  - Mysterious/Ancient/Incomplete/Nameless + Noun: Mysterious Fragment, Ancient Ring
+  - [Material/Image] + [Vessel Type]: Dark-Iron Ring, Black-Wood Box, Bluestone Seal
+  - [Function] + [Vessel Type]: Quell-Grievance Stone, Soul-Capture Bell, Spirit-Gathering Bottle
+
+- Cultivation Methods / Skills
+  - [Verb] + Qi/Body/Soul + Art/Formula/Chapter: Qi-Condensing Formula, Body-Refining Art, Soul-Nurturing Chapter
+  - [Image] + Scripture/Record/Method: Pure-Yang Scripture, Mystic-Ice Record, Stardust Method
+  - [Weapon/Body-Part] + Method/Palm/Sword/Step: Sword Method, Finger-Formula, Soaring Step
+
+- Artifacts / Equipment
+  - [Function] + [Vessel Type]: Armor-Piercing Spear, Spirit-Gathering Ring, Poison-Warding Cover
+  - [Material] + [Vessel Type]: Cold-Jade Pendant, Black-Gold Armor
+  - Three-part (Common name / Item name / Grade): Wolf-Tooth Club . Bone-Breaker / Superior
+
+- Organizations / Forces / Place Names (Classical / Modern)
+  - [Geography/Image] + Sect/Hall/Camp/Bureau/Society/Office: Cloud-Piercing Sect, Black-Flag Camp, Sea-Watching Bureau
+  - [Goal/Nature] + Society/Alliance/Group: Way-Protecting Alliance, Scavenger Society
+  - [Image/Place] + Group/Tech/Media/Lab: Morning-Star Tech, Coastal Group
+
+- Technology / Projects (Sci-Fi / Near-Future)
+  - [Tech name] + System/Platform/Engine: Phase-Positioning System, Warp Engine
+  - [Function] + Device/Module/Component: Self-Repair Armor Module, Sync Device
+  - [Plan] / [Codename]: Ark Project, Dawn Operation, Echo Protocol
+
+---
+
+### Grading Systems (pick one and use it consistently)
+- Numeric order: Tier 1 / Tier 2 / Tier 3...
+- Quality order (Fantasy): Common / Fine / Superior / Supreme / Spirit / Immortal
+- Competitive order (Modern): Iron / Bronze / Silver / Gold / Platinum / Diamond / Master
+- Usage: keep the name unchanged; only append the grade in parentheses at the end, e.g. "Spirit-Gathering Ring (Tier 3)".
+
+---
+
+### Minimalist Style Words (take at most 1 per name, optional)
+- Xianxia / Fantasy: Mystic, Spirit, Elixir, Array, Formula, Scripture, Talisman, Sword, Yang, Thunder, Wind, Cold
+- Urban / Realistic: Top-Student, Tycoon, Crime-Investigation, Live-Streaming, Startup, Training
+
+---
+
+### Character Naming (quick-use)
+- Principles: fit the era/region, easy to speak and write, avoid rare characters (at most 1), avoid same-sounding or highly duplicated names with the protagonist.
+- Templates:
+  - Urban / Realistic: common surname + two-character given name; nickname / screen-name = [Trait/Occupation] + title (e.g., Old Zhou, Delivery Guy, Forensic Lin, Boss Zhang).
+  - Classical / Xianxia: surname + single-character given name (or two-character given name); may add a courtesy name / alias (e.g., Gu Heng, courtesy name Ziyan; Qingxu Zi, Bamboo-Hut Daoist).
+  - Family / Sect: unify a "ranking / generation character" (e.g., Cheng / Ji / Hong / Shou / Ning / An), with all peers sharing one character.
+  - Sci-Fi / Western: use a single language (Chinese or English) for the formal name. Codenames are only displayed alongside as aliases: Li Ran (codename Zero) / Evan Chen (codename Zero) / Li Ran with codename Zero.
+- Common surnames (selection): Li, Wang, Zhang, Liu, Chen, Yang, Huang, Zhao, Zhou, Wu, Zheng, Sun, Hu, Zhu, Gao, Lin, He, Guo, Ma, Luo, Liang, Song, Xie, Tang, Xu, Deng, Feng, Han, Cao, Zeng, Peng, Xiao, Cai, Pan.
+- Safe characters (a few, usable for both genders): An, Ning, Qing, Ran, Chen, Yan, Cheng, Chuan, Heng, Chu, Qing, Bamboo, Lan, Xi, Zhou, Yuan, Mu.
+- Classical imagery (a few): Ji, Yan, Tang, Yuan, Zhou, Mo, Xia, Li, Qing, Ling.
+- Generational tendencies (hint, use cautiously to avoid cliche): 1980s-90s often "Wei / Qiang / Jun / Lei / Jing / Na"; post-2000s often "Yu / Xuan / Han / Zi".
+- Taboos: domineering-CEO mashups (e.g., "Bei Ming Ye", "Long Ao Tian"), multiple rare characters, vulgar homophones, mixing Chinese and English within a formal name. Note: you may display "real name + (codename) / codename + (real name)" side by side, but the codename must not be merged into the formal name.
+
+
+---
+
+### Chapter Naming (quick-use)
+- Length: 4-12 characters; no multiple punctuation or parentheses; readable and speakable.
+- Tone: consistent with the genre; do not spoil the ending, only highlight the "high-energy point" of this chapter.
+- Format:
+  - Numbering: Title; for volumes you may use Volume Name . Chapter X Title.
+  - Multi-part: Upper/Middle/Lower or (1)/(2)/(Finale), unified to one style.
+  - Tags (optional): a fixed few placed at the front, e.g. [Side Story] [Single Chapter], do not stack multiple tags.
+  - Colon: by default do not use "X: Y" colon titles; if you must (to highlight contrast / twist, etc.), keep it to <=1 per volume, to avoid the whole volume becoming "monotonous colon titles".
+- Templates:
+  - Location + Event: Old Schoolhouse Disappearance, Harbor Night Talk
+  - Character + Action: Lin Qing Asks for Battle, Gu Heng Tests His Sword
+  - Goal + Obstacle: Chasing the Killer Caught in Rain, Failed Prison Break
+  - Object + Clue: Origin of the Broken Blade, Sheepskin Scroll Record
+  - Time + Twist: Visitor at Dawn, Misunderstanding at Dusk
+  - Conflict + Result: Night Raid Succeeds, Negotiation Breaks Down
+  - Suspense Question (use sparingly): Who is he really? (<=2 per volume)
+  - Dialogue Lead: Don't Look Back, Don't Open the Door (take four key characters from dialogue)
+- Taboos:
+  - Fake "grandiose" word-piling (e.g., "Quantum-Stardome Ultimate Awakening")
+  - Long strings of punctuation / emojis / multiple tags
+  - Homogenized "X: Y" colon titles appearing densely (looks templated, loses distinctiveness)
+  - Key spoilers (writing out the killer / ending directly)
+
+
+---
+
+### High-Risk Words & Forbidden Combinations (avoid by default)
+- High-risk words (forbidden in non-matching genres): Quantum, Netherworld, Phantom, Ultimate, Supreme, Stardome, Eternal, Chaos, Entropy, Rust, Myriad-Phenomena.
+- Forbidden combinations:
+  - System names stacking 3 or more modifiers (e.g., "Netherworld Phantom Stardome System").
+  - "Cosmic-grade / Multiverse-grade" + everyday objects.
+  - Fantasy x hard-sci-fi wording mashups (unless explicitly a hybrid genre, taking at most 1 hard-sci-fi word).
+
+---
+
+### Default Fallback Naming (use when no formal name is taken)
+- Mysterious Fragment (can absorb grievances and turn will into power)
+- Attribute Panel (records talents and skills)
+- Simulator (reviews key decisions)
