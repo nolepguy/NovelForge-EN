@@ -448,6 +448,29 @@ defineExpose({
   color: var(--el-text-color-primary);
 }
 
+/* XMarkdown renders inline `code` as span.inline-code-tag with a hardcoded
+   light background (#d7e2f8). The blanket color:inherit on spans above would
+   turn its text white in dark mode (white-on-white); pin theme-aware colors. */
+:deep(.bubble-markdown .inline-code-tag) {
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-primary);
+  border-color: var(--el-border-color-lighter);
+}
+
+/* ==highlight== renders as <mark>; guarantee readable colors in both themes */
+:deep(.bubble-markdown mark) {
+  background-color: #fff8c5;
+  color: #1f2328;
+  padding: 0.1em 0.2em;
+  border-radius: 2px;
+}
+
+/* Highlight in dark mode (html.dark is set by useAppStore.applyTheme) */
+.dark .agent-message-list :deep(.bubble-markdown mark) {
+  background-color: #bb800926;
+  color: #f0f6fc;
+}
+
 :deep(.bubble-markdown p) {
   margin: 0.35em 0;
 }
