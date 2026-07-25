@@ -728,6 +728,7 @@ export function resolveTemplate(ctx: ResolveContext): string {
     let depthSquare = 0
     let depthCurly = 0
     let quote: '"' | "'" | null = null
+    let breakChar: '@' | '\n' | null = null
     while (j < n) {
       const ch = s[j]
       const prev = j > 0 ? s[j - 1] : ''
@@ -745,13 +746,27 @@ export function resolveTemplate(ctx: ResolveContext): string {
       if (ch === ']') { depthSquare = Math.max(0, depthSquare - 1); j++; continue }
       if (ch === '{') { depthCurly++; j++; continue }
       if (ch === '}') { depthCurly = Math.max(0, depthCurly - 1); j++; continue }
-      // End condition: encountered whitespace or a new @, and not inside any bracket/quote
-      if ((ch === '@' || ch === '\n') && depthSquare === 0 && depthCurly === 0) break
+      // End condition: encountered a new @ or newline, and not inside any bracket/quote
+      if ((ch === '@' || ch === '\n') && depthSquare === 0 && depthCurly === 0) {
+        breakChar = ch
+        break
+      }
       j++
     }
-    const raw = s.substring(at, j).trim()
-    tokens.push({ start: at, end: j, raw })
-    i = j + 1
+    const raw = s.substring(at, j)
+    const trimmed = raw.trim()
+    // When breaking on '@', that '@' begins the next reference: re-scan from it (i = j)
+    // instead of skipping it (i = j + 1), otherwise a space between two @refs causes the
+    // second reference to be dropped. Preserve any trailing whitespace as literal text
+    // between the resolved tokens.
+    let end = j
+    if (breakChar === '@') {
+      end = j - (raw.length - trimmed.length)
+      i = j
+    } else {
+      i = j + 1
+    }
+    tokens.push({ start: at, end, raw: trimmed })
   }
 
   // Reverse replacement (uses built-in parsing only, cross-project @ not supported)
