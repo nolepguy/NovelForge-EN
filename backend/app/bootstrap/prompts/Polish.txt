@@ -15,7 +15,7 @@
 
 
 - knowledge:
-    - @KB{ name=Writing Style Constraints }
+    - @KB{ name=Style Constraints }
 
 [Instruction Priority (Must Be Followed)]
 1. Explicit requirements given by the user in "User Requirements" have the highest priority and must be satisfied first.

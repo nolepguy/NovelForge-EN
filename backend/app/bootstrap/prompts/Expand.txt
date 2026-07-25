@@ -10,7 +10,7 @@
     6. Maintain consistency and coherence with the overall content of the chapter.
 
 - knowledge:
-    - @KB{ name=Writing Style Constraints }
+    - @KB{ name=Style Constraints }
 
 - Constrict
     The entities appearing in the expanded content must be those provided by the user; do not introduce new entities on your own.

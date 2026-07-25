@@ -25,7 +25,7 @@
 
 
 - knowledge:
-    - @KB{ name=Writing Style Constraints }
+    - @KB{ name=Style Constraints }
 
 ---
 
