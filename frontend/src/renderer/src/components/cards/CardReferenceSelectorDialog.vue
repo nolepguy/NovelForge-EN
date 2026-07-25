@@ -7,7 +7,7 @@
     @close="reset"
   >
     <div class="selector-container">
-      <!-- Left column: search + type-grouped card tree -->
+      <!-- Left column: search + type-grouped card tree (multi-select via checkboxes) -->
       <div class="column left">
         <el-input
           v-model="cardSearch"
@@ -16,36 +16,41 @@
           class="mt8"
         />
         <el-tree
+          ref="cardTreeRef"
           :data="cardTreeData"
           :props="{ label: 'label', children: 'children' }"
           node-key="key"
-          :current-node-key="currentNodeKey || undefined"
-          highlight-current
+          show-checkbox
           :default-expand-all="false"
           :expand-on-click-node="false"
           class="card-tree"
           @node-click="handleTreeNodeClick"
+          @check="handleCardTreeCheck"
         />
       </div>
 
-      <!-- Right column: field tree -->
+      <!-- Right column: field tree of the focused card -->
       <div class="column">
         <div class="row-head">
           <h3>{{ t('card.selectFieldOptional') }}</h3>
-          <div class="right-tools">
-            <el-checkbox v-model="multiMode">{{ t('card.multiSelectFields') }}</el-checkbox>
-          </div>
+          <span class="focused-title">
+            {{
+              focusedCard
+                ? t('card.fieldsForCard', { title: focusedCard.title })
+                : t('card.selectFieldHint')
+            }}
+          </span>
         </div>
         <el-tree
           v-if="fieldPaths.length"
           ref="treeRef"
           :data="fieldPaths"
           :props="{ label: 'label', children: 'children' }"
-          :show-checkbox="multiMode"
+          node-key="path"
+          show-checkbox
           :check-strictly="true"
           class="field-tree"
           highlight-current
-          @node-click="handleFieldSelect"
           @check="handleTreeCheck"
         />
         <div v-else class="empty-state">
@@ -57,8 +62,8 @@
     <!-- Footer -->
     <template #footer>
       <div class="footer-container">
-        <span class="selection-preview">
-          {{ t('card.previewLabel') }} <strong>{{ selectionPreview }}</strong>
+        <span class="selection-preview" :title="selectionPreview">
+          {{ t('card.previewLabel') }} <strong>{{ selectionPreview || '—' }}</strong>
         </span>
         <span class="dialog-footer">
           <el-button @click="$emit('update:modelValue', false)">{{ t('common.cancel') }}</el-button>
@@ -72,12 +77,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { CardRead } from '@renderer/api/cards'
 import { schemaService, type JSONSchema } from '@renderer/api/schema'
 import { getCardSchema } from '@renderer/api/setting'
-import { ElDialog, ElInput, ElTree, ElButton, ElCheckbox } from 'element-plus'
+import { ElDialog, ElInput, ElTree, ElButton } from 'element-plus'
 
 interface FieldPath {
   label: string
@@ -99,25 +104,34 @@ interface CardSchemaResponse {
 
 interface TreeInstanceProxy {
   getCheckedNodes: (leafOnly?: boolean) => FieldPath[]
+  setCheckedKeys: (keys: string[]) => void
+}
+
+interface CardTreeCheckMeta {
+  checkedKeys: string[]
+  halfCheckedKeys: string[]
 }
 
 const props = defineProps<{ modelValue: boolean; cards: CardRead[]; currentCardId?: number }>()
 const emit = defineEmits(['update:modelValue', 'confirm'])
 const { t } = useI18n()
 
-// By title
+// Search
 const cardSearch = ref('')
-const selectedKard = ref<CardRead | null>(null)
 
-// Field tree
+// Multi-card selection state
+const checkedCardIds = ref<number[]>([]) // insertion-ordered list of checked card ids
+const focusedCardId = ref<number | null>(null) // card whose field tree is shown on the right
+const cardFieldSelection = ref<Record<number, string[]>>({}) // cardId -> selected field paths (empty = whole card .content)
+
+// Tree instances
+const cardTreeRef = ref<TreeInstanceProxy>()
 const treeRef = ref<TreeInstanceProxy>()
-const selectedFieldPath = ref<string | null>(null)
-const selectedFieldPaths = ref<string[]>([])
-const multiMode = ref<boolean>(false)
+
+// Field tree of the focused card
 const fieldPaths = ref<FieldPath[]>([])
 
-// Current highlight key in the card tree
-const currentNodeKey = ref<string | null>(null)
+const focusedCard = computed(() => props.cards.find((c) => c.id === focusedCardId.value) || null)
 
 // Filter cards (by title)
 const filteredCards = computed(() =>
@@ -144,25 +158,24 @@ const cardTreeData = computed<CardTreeNode[]>(() => {
     }))
 })
 
-function buildPathSpec(): string {
-  if (multiMode.value && selectedFieldPaths.value.length > 0) {
-    return '.{' + selectedFieldPaths.value.join(',') + '}'
-  }
-  if (selectedFieldPath.value) return `.${selectedFieldPath.value}`
-  return ''
+function buildCardRef(card: CardRead): string {
+  const paths = cardFieldSelection.value[card.id] || []
+  if (paths.length === 0) return `@${card.title}.content`
+  if (paths.length === 1) return `@${card.title}.${paths[0]}`
+  return `@${card.title}.{${paths.join(',')}}`
 }
 
-// Preview string
+// Combined preview string (one @ref per checked card, space-joined)
 const selectionPreview = computed(() => {
-  if (!selectedKard.value) return ''
-  const pathSpec = buildPathSpec()
-  // By-title mode: defaults to .content when no field is selected
-  return pathSpec
-    ? `@${selectedKard.value.title}${pathSpec}`
-    : `@${selectedKard.value.title}.content`
+  if (checkedCardIds.value.length === 0) return ''
+  return checkedCardIds.value
+    .map((id) => props.cards.find((c) => c.id === id))
+    .filter((c): c is CardRead => !!c)
+    .map(buildCardRef)
+    .join(' ')
 })
 
-const canConfirm = computed(() => !!selectedKard.value)
+const canConfirm = computed(() => checkedCardIds.value.length > 0)
 
 watch(
   () => props.modelValue,
@@ -173,35 +186,86 @@ watch(
 
 function reset(): void {
   cardSearch.value = ''
-  selectedKard.value = null
-  selectedFieldPath.value = null
-  selectedFieldPaths.value = []
-  multiMode.value = false
+  checkedCardIds.value = []
+  focusedCardId.value = null
+  cardFieldSelection.value = {}
   fieldPaths.value = []
-  currentNodeKey.value = null
+  nextTick(() => {
+    cardTreeRef.value?.setCheckedKeys?.([])
+    treeRef.value?.setCheckedKeys?.([])
+  })
 }
 
-function handleTreeNodeClick(data: CardTreeNode): void {
-  // Only leaf card nodes carry a `card` payload
-  if (data && data.card) {
-    handleCardSelect(data.card)
-    currentNodeKey.value = data.key
+// Left tree: checkbox change
+function handleCardTreeCheck(data: CardTreeNode, meta: CardTreeCheckMeta): void {
+  const newIds = meta.checkedKeys
+    .filter((k) => k.startsWith('card:'))
+    .map((k) => Number(k.split(':')[1]))
+    .filter((id) => Number.isFinite(id))
+  const set = new Set(newIds)
+  // Preserve insertion order: keep prior order for cards still checked, append new ones
+  const ordered: number[] = checkedCardIds.value.filter((id) => set.has(id))
+  for (const id of newIds) if (!ordered.includes(id)) ordered.push(id)
+  // Initialize field state for newly checked cards (default empty = .content); drop unchecked
+  for (const id of ordered) if (!(id in cardFieldSelection.value)) cardFieldSelection.value[id] = []
+  for (const id of checkedCardIds.value) if (!set.has(id)) delete cardFieldSelection.value[id]
+  checkedCardIds.value = ordered
+
+  // Activate right field only when a single card leaf was directly checked (not a type group)
+  if (data && data.card && set.has(data.card.id)) {
+    focusedCardId.value = data.card.id
+    void loadFieldTreeForFocused()
+  }
+  // If the focused card is no longer checked (via any path), deactivate the right field
+  if (focusedCardId.value != null && !ordered.includes(focusedCardId.value)) {
+    focusedCardId.value = null
+    fieldPaths.value = []
   }
 }
 
-async function handleCardSelect(card: CardRead): Promise<void> {
-  selectedKard.value = card
-  selectedFieldPath.value = null
-  selectedFieldPaths.value = []
-  fieldPaths.value = []
+// Left tree: node click (focus only, does not toggle check; only checked cards can be focused)
+function handleTreeNodeClick(data: CardTreeNode): void {
+  if (data && data.card && checkedCardIds.value.includes(data.card.id)) {
+    focusedCardId.value = data.card.id
+    void loadFieldTreeForFocused()
+  }
+}
+
+async function loadFieldTreeForFocused(): Promise<void> {
+  const card = focusedCard.value
+  if (!card) {
+    fieldPaths.value = []
+    return
+  }
   try {
     const resp = (await getCardSchema(card.id)) as CardSchemaResponse | undefined
     const sch = resp?.effective_schema || resp?.json_schema
-    if (sch) fieldPaths.value = generateFieldFields(sch)
+    fieldPaths.value = sch ? generateFieldFields(sch) : []
   } catch {
-    // schema load failed: leave field tree empty
+    fieldPaths.value = []
   }
+  // After data renders, sync checkbox state to this card's stored selection
+  nextTick(() => {
+    const saved = cardFieldSelection.value[card.id] || []
+    treeRef.value?.setCheckedKeys?.(saved)
+  })
 }
+
+// Right field tree: checkbox change → write back to focused card's field selection
+function handleTreeCheck(): void {
+  if (focusedCardId.value == null) return
+  if (!checkedCardIds.value.includes(focusedCardId.value)) return
+  const nodes = treeRef.value?.getCheckedNodes?.(false) || []
+  cardFieldSelection.value[focusedCardId.value] = nodes.map((n) => n.path)
+}
+
+// Re-apply left-tree checked visuals after the filter recomputes the tree data
+watch([cardTreeData], () => {
+  nextTick(() => {
+    const keys = checkedCardIds.value.map((id) => `card:${id}`)
+    cardTreeRef.value?.setCheckedKeys?.(keys)
+  })
+})
 
 function generateFieldFields(schema: JSONSchema, prefix = 'content'): FieldPath[] {
   const paths: FieldPath[] = []
@@ -245,17 +309,6 @@ function generateFieldFields(schema: JSONSchema, prefix = 'content'): FieldPath[
 
   if (schema && schema.properties) walkObject(schema, prefix)
   return paths
-}
-
-function handleFieldSelect(data: FieldPath): void {
-  if (multiMode.value) return // In multi-select mode, rely on checkboxes
-  // Single select: allow non-leaf nodes
-  selectedFieldPath.value = data.path
-}
-
-function handleTreeCheck(): void {
-  const nodes = treeRef.value?.getCheckedNodes?.(false) || []
-  selectedFieldPaths.value = nodes.map((n) => n.path)
 }
 
 function handleConfirm(): void {
@@ -315,10 +368,15 @@ function handleConfirm(): void {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  gap: 12px;
 }
 .selection-preview {
   font-size: 14px;
   color: var(--el-text-color-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
 }
 .mt8 {
   margin-top: 8px;
@@ -327,11 +385,15 @@ function handleConfirm(): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-.right-tools {
-  display: flex;
-  align-items: center;
   gap: 8px;
+}
+.focused-title {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dialog-footer .el-button {
   white-space: nowrap;

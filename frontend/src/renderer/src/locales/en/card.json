@@ -76,6 +76,7 @@
     "specialPathPlaceholder": "Optional: enter field path here, e.g. content.volume_number",
     "selectFieldOptional": "2. Select Field (Optional)",
     "multiSelectFields": "Multi-select fields",
+    "fieldsForCard": "Fields for: {title}",
     "selectFieldHint": "Select field paths to append here (optional).",
     "previewLabel": "Preview:",
     "filterTipFirst": "First card of the same type in global stable sort",
