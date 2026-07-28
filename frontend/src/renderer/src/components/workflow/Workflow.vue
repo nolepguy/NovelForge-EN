@@ -379,16 +379,16 @@ const onWorkflowChange = async (workflowId) => {
     // Clear selection
     currentWorkflowId.value = null
     currentWorkflowName.value = t('workflow.unnamedWorkflow')
-    code.value = `# 示例工作流
-#@node(description="选择项目")
+    code.value = `# Example workflow
+#@node(description="Select project")
 project = Logic.SelectProject(project_id=1)
 #</node>
 
-#@node(description="加载小说目录")
+#@node(description="Load novel directory")
 novel = Novel.Load(root_path="E:\\\\Novels\\\\book")
 #</node>
 
-#@node(description="批量创建分卷卡片")
+#@node(description="Batch create volume cards")
 cards = Card.BatchUpsert(
     items=novel.volume_list,
     card_type="volume",
@@ -436,8 +436,8 @@ const createNewWorkflow = async () => {
     })
 
     // Create a new workflow using the marker DSL template
-    const initialCode = `# 新工作流
-#@node(description="选择项目")
+    const initialCode = `# New workflow
+#@node(description="Select project")
 project = Logic.SelectProject(project_id=1)
 #</node>`
     const workflow = await saveCodeWorkflow(name, initialCode)
@@ -483,16 +483,16 @@ const deleteWorkflow = async () => {
     currentWorkflowId.value = null
     currentWorkflowName.value = t('workflow.unnamedWorkflow')
     currentWorkflowRevision.value = ''
-    code.value = `# 示例工作流
-#@node(description="选择项目")
+    code.value = `# Example workflow
+#@node(description="Select project")
 project = Logic.SelectProject(project_id=1)
 #</node>
 
-#@node(description="加载小说目录")
+#@node(description="Load novel directory")
 novel = Novel.Load(root_path="E:\\\\Novels\\\\book")
 #</node>
 
-#@node(description="批量创建分卷卡片")
+#@node(description="Batch create volume cards")
 cards = Card.BatchUpsert(
     items=novel.volume_list,
     card_type="volume",
@@ -1297,6 +1297,7 @@ const handleVisualRevisionChanged = (revision) => {
 .section-subtitle {
   font-size: 13px;
   color: var(--el-text-color-secondary);
+  margin-left: 8px;
 }
 
 /* Validation result styles */

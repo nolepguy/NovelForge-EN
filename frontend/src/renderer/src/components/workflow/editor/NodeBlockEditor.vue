@@ -98,7 +98,7 @@
             />
           </div>
           <div v-if="!node.collapsed" v-for="(field, fieldIndex) in node.fields" :key="field.name" class="param-item">
-            <span class="param-key">{{ field.label }}:</span>
+            <span class="param-key" :title="field.description || field.label">{{ field.label }}:</span>
             <div class="param-value-wrapper">
                 <!-- Edit mode -->
               <div
@@ -645,7 +645,8 @@ async function fetchNodeOutputs(node) {
         
         return {
           name: fieldName,
-          label: fieldDef.description || fieldName,
+          label: fieldName,
+          description: fieldDef.description || '',
           type: resolveFieldType(fieldDef),
           required: fieldDef.required || false,
           default: fieldDef.default,
@@ -709,6 +710,7 @@ async function fetchNodeOutputs(node) {
         return {
           name: fieldName,
           label: fieldName,
+          description: '',
           type: fieldType,
           required: false,
           default: undefined,

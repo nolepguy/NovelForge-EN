@@ -1209,8 +1209,8 @@ class WorkflowValidator:
                             f"Sync node '{stmt.variable}' depends on async node '{async_dep}', but no Logic.Wait was executed before it to wait for the async task to complete"
                         ),
                         suggestion=(
-                            f"Insert a wait node before using '{async_dep}' , e.g.:\n"
-                            f"#@node(description="wait for {async_dep} to complete")\n"
+                            f"Insert a wait node before using '{async_dep}', e.g.:\n"
+                            f'#@node(description="wait for {async_dep} to complete")\n'
                             f"wait_{async_dep} = Logic.Wait(tasks={async_dep})\n"
                             f"#</node>"
                         ),
