@@ -24,6 +24,16 @@
 
 </div>
 
+> ## ℹ️ English Fork Notice
+>
+> This is an **English-language fork** of [NovelForge](https://github.com/RhythmicWave/NovelForge), originally created and maintained by **[RhythmicWave](https://github.com/RhythmicWave)**.
+>
+> - The original project is in **Chinese**. This fork localizes the UI, documentation, and seed content to **English**.
+> - This is **not** a 1:1 copy — some features, labels, or behaviors may differ from the upstream Chinese version as part of the localization process.
+> - **I am not a coder.** This English migration was produced **100% by AI** assistance. Expect rough edges, and please report issues if you spot anything off.
+
+---
+
 **NovelForge** is an AI-assisted writing tool capable of producing long-form novels of hundreds of thousands or even millions of words. It is more than an editor — it is a complete solution combining world-building and structured content generation.
 
 In long-form writing, the greatest challenges are maintaining consistency, ensuring controllability, and sustaining inspiration. To address these, NovelForge is built around four core concepts: modular **"Cards"**, customizable **"Dynamic Output Models"**, flexible **"Context Injection"**, and consistency-preserving **"Knowledge Graph"**.
@@ -448,8 +458,8 @@ The project now uses SQLite by default to implement relationship-graph storage, 
 **1. Backend (Python / FastAPI)**
 ```bash
 # Clone the repo
-git clone https://github.com/RhythmicWave/NovelForge.git
-cd NovelForge/backend
+git clone https://github.com/nolepguy/NovelForge-EN.git
+cd NovelForge-EN/backend
 
 conda create -n NovelForge python=3.11
 conda activate NovelForge
