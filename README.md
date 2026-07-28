@@ -17,8 +17,7 @@
   <a href="#workflow-system">Workflow System</a> •
   <a href="#project-structure">Project Structure</a> •
   <a href="./CONTRIBUTING.md">Contributing</a> •
-  <a href="./ROADMAP.md">Roadmap</a> •
-  <a href="#community">Community</a>
+  <a href="./ROADMAP.md">Roadmap</a>
 </p>
 
 
@@ -837,10 +836,3 @@ The best tools come from community wisdom. Whether you are a creator or a develo
 
 *   Raise valuable feature suggestions or report issues in **Issues**.
 *   Share your unique insights on the creation workflow.
-
-
-
-<a id="community"></a>
-## Community
-
-![alt text](docImgs/README/image-40.png)
