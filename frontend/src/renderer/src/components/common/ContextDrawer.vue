@@ -128,8 +128,10 @@ function handleDrawerInput(ev: Event) {
 <style scoped>
 .drawer-wrapper { display: flex; flex-direction: column; gap: 16px; height: 100%; }
 .drawer-header { display: flex; justify-content: space-between; align-items: center; }
+.drawer-header h3 { margin: 0; color: var(--el-text-color-primary); }
 .section { display: flex; flex-direction: column; gap: 8px; }
 .slot-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.slot-toolbar h4 { margin: 0; color: var(--el-text-color-primary); }
 .slot-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
 .context-area { width: 100%; }
 .actions { display: flex; gap: 8px; }

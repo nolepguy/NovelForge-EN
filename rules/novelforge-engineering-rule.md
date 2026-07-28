@@ -1,5 +1,5 @@
 ---
-description: NovelForge 工程开发规则（架构优雅性、低耦合、可维护性）
+description: NovelForge engineering development rules (architectural elegance, low coupling, maintainability)
 globs:
   - "backend/**/*.py"
   - "frontend/src/renderer/src/**/*.{ts,vue}"
@@ -9,189 +9,189 @@ alwaysApply: true
 
 # NovelForge Engineering Rule
 
-## 0) 目标
+## 0) Goal
 
-所有开发行为以“长期可维护”为第一优先级：
+All development behavior prioritizes "long-term maintainability" first:
 
-1. 低耦合（模块边界清晰）
-2. 高内聚（单一职责）
-3. 可验证（变更有校验闭环）
-4. 可演进（避免一次性写死）
+1. Low coupling (clear module boundaries)
+2. High cohesion (single responsibility)
+3. Verifiable (changes have a validation loop)
+4. Evolvable (avoid hardcoding everything at once)
 
-禁止为了“先跑通”引入难以回收的硬编码和隐式行为。
-
----
-
-## 1) 架构与解耦规则
-
-### 1.1 事件驱动优先
-
-- 跨域联动（例如“保存卡片后触发工作流”）必须优先采用事件发布/订阅。
-- 禁止在业务入口里直接串联多个下游模块实现“硬调用链”。
-
-### 1.2 插件化注册优先
-
-- 可扩展能力（初始化器、工作流节点、事件处理器）必须通过装饰器注册。
-- 新增能力必须完成“两步”：
-  1) 定义并加装饰器
-  2) 在对应 `__init__.py` 导入，确保注册生效
-
-### 1.3 配置集中管理
-
-- 所有可变参数必须进入统一配置体系（环境变量 + 配置对象）。
-- 禁止在业务代码中硬编码：URL、开关、阈值、模型名、超时、重试次数。
+Do not introduce hard-to-reclaim hardcoding and implicit behavior just to "get it running."
 
 ---
 
-## 2) 服务层与接口规则
+## 1) Architecture & Decoupling Rules
 
-### 2.1 单一职责
+### 1.1 Event-Driven First
 
-- 一个 service 只负责一个领域。
-- 复杂能力拆分为“小服务 + 协调层”，禁止“巨型上帝类服务”。
+- Cross-domain linkage (e.g. "trigger a workflow after saving a card") must prefer event publish/subscribe.
+- Do not directly chain multiple downstream modules in a business entry to form a "hard call chain."
 
-### 2.2 依赖注入
+### 1.2 Plugin-Style Registration First
 
-- 通过参数注入 `Session`、配置、依赖对象。
-- 禁止在函数内部偷偷创建全局依赖实例并长期持有。
+- Extensible capabilities (initializers, workflow nodes, event handlers) must be registered via decorators.
+- Adding a capability must complete the "two steps":
+  1) Define and decorate
+  2) Import in the corresponding `__init__.py` to ensure registration takes effect
 
-### 2.3 API 契约唯一来源
+### 1.3 Centralized Configuration Management
 
-- 类型定义以后端 schema 为唯一真相。
-- 前端必须使用 OpenAPI 生成类型；禁止手写重复接口类型并长期并存。
-- 前端不要重复构建后端模型或接口类型，优先通过 `npm run gen:types` 从后端生成并复用。
-- 任何 API 端点必须声明清晰响应模型，确保契约可生成。
+- All variable parameters must enter the unified configuration system (environment variables + config objects).
+- Do not hardcode in business code: URLs, switches, thresholds, model names, timeouts, retry counts.
 
 ---
 
-## 3) 工作流系统规则
+## 2) Service Layer & Interface Rules
 
-### 3.1 代码修改闭环
+### 2.1 Single Responsibility
 
-- 任何工作流代码改动必须走“可验证闭环”：
-  1) 生成新代码/补丁
+- A service is responsible for only one domain.
+- Split complex capabilities into "small services + a coordination layer"; no "giant god-class services."
+
+### 2.2 Dependency Injection
+
+- Inject `Session`, config, and dependency objects via parameters.
+- Do not secretly create and long-term hold global dependency instances inside a function.
+
+### 2.3 API Contract Single Source of Truth
+
+- Type definitions take the back-end schema as the single source of truth.
+- The front end must use OpenAPI-generated types; do not hand-write duplicate interface types and keep them around long-term.
+- The front end should not rebuild back-end models or interface types; prefer generating and reusing them from the back end via `npm run gen:types`.
+- Any API endpoint must declare a clear response model to ensure the contract is generatable.
+
+---
+
+## 3) Workflow System Rules
+
+### 3.1 Code-Change Loop
+
+- Any workflow code change must go through a "verifiable loop":
+  1) generate new code/patch
   2) parse
   3) validate
-  4) 通过后才应用
+  4) apply only after passing
 
-- 禁止跳过校验直接落库。
+- Do not skip validation and write directly to the database.
 
-### 3.2 可视化编辑安全性
+### 3.2 Visual-Editing Safety
 
-- 可视化参数修改不得直接拼接字符串写回。
-- 必须处理好字面量编码/转义，避免把合法值写成带多余引号的错误代码。
-- 任何前端写回都必须经过服务端校验结果确认。
+- Visual parameter changes must not be written back by directly concatenating strings.
+- Literal encoding/escaping must be handled correctly to avoid writing a legal value as erroneous code with extra quotes.
+- Any front-end write-back must be confirmed via a server-side validation result.
 
-### 3.3 运行能力一致性
+### 3.3 Runtime-Capability Consistency
 
-- 工作流功能设计必须考虑：
-  - 后台运行可见性（全局状态反馈）
-  - 节点级进度上报
-  - 暂停/恢复
-  - 运行记录保留策略（临时 vs 持久化）
+- Workflow feature design must consider:
+  - Background-run visibility (global status feedback)
+  - Node-level progress reporting
+  - Pause/resume
+  - Run-record retention policy (temporary vs. persistent)
 
-- 新功能不得破坏以上能力的一致语义。
-
----
-
-## 4) Agent 系统规则
-
-### 4.1 共享层与业务层分离
-
-- 通用消息渲染、流式事件、输入框交互必须复用共享层。
-- 业务 Agent 只实现自己的工具与策略，不复制一套 UI/协议。
-
-### 4.2 单轨展示，避免双实现
-
-- 同一语义（如消息时间线）禁止维护两套并行显示逻辑。
-- 若确需新增模式，必须证明旧模式无法满足需求，并给出迁移计划。
-
-### 4.3 运行期依赖必须明确
-
-- 关键提示词等运行依赖缺失时应明确报错。
-- 禁止加入“只在源码目录可用”的隐式兜底读取逻辑。
+- New features must not break the consistent semantics of the above capabilities.
 
 ---
 
-## 5) 前端工程规则
+## 4) Agent System Rules
 
-### 5.1 组件规模控制
+### 4.1 Shared Layer vs. Business Layer Separation
 
-- 超大组件必须持续拆分（UI、状态、事件处理、数据转换分离）。
-- 优先抽离：共享组件、composable、类型定义。
+- Generic message rendering, streaming events, and input-box interaction must reuse the shared layer.
+- Business Agents only implement their own tools and strategies; do not copy a UI/protocol.
 
-### 5.2 暗黑模式与主题
+### 4.2 Single-Track Display, Avoid Dual Implementations
 
-- 样式必须优先使用主题变量。
-- 禁止硬编码浅色文本导致暗黑模式不可读。
+- The same semantics (e.g. message timeline) must not maintain two parallel display logics.
+- If a new mode is genuinely needed, you must prove the old mode can't meet the need and provide a migration plan.
 
-### 5.3 状态与事件一致性
+### 4.3 Runtime Dependencies Must Be Explicit
 
-- 任何流式交互都必须有明确状态机（idle/running/stopped/error）。
-- “发送/中止”必须共用一个动作入口，避免双按钮状态冲突。
-
----
-
-## 6) 数据与健壮性规则
-
-### 6.1 输入容错与字段兜底
-
-- 事件负载和节点输入必须做必需字段防御性处理。
-- 对关键字段允许“多层回退解析”，避免因 `None` 直接中断整条链路。
-
-### 6.2 事务与异常边界
-
-- 失败必须可回滚，不得产生半成功脏状态。
-- 对可降级功能（例如非关键联动）可捕获异常，但必须记录结构化日志。
+- When key runtime dependencies like prompts are missing, it should report an error explicitly.
+- Do not add "only available in source-code directory" implicit fallback-read logic.
 
 ---
 
-## 7) 编码与变更规则
+## 5) Frontend Engineering Rules
 
-### 7.1 最小变更原则
+### 5.1 Component Size Control
 
-- 只改与目标相关的文件和逻辑。
-- 禁止无关重构、无关命名重写、无关格式化噪音。
+- Oversized components must be continuously split (UI, state, event handling, data conversion separated).
+- Prioritize extracting: shared components, composables, type definitions.
 
-### 7.2 编码与文件安全
+### 5.2 Dark Mode & Theming
 
-- 文本文件统一使用 UTF-8。
-- 禁止在不确认编码的情况下整文件重写，优先局部补丁。
+- Styles must prefer theme variables.
+- Do not hardcode light text that becomes unreadable in dark mode.
 
-### 7.3 禁止反模式
+### 5.3 State & Event Consistency
 
-禁止以下行为：
-
-- 为“快”而复制粘贴同构逻辑（前后端、模块间）
-- 在多个位置维护同一份业务规则
-- 用前端临时字符串规则替代后端正式校验
-- 把过程性调试开关长期暴露给用户而无产品意义
+- Any streaming interaction must have a clear state machine (idle/running/stopped/error).
+- "Send/abort" must share one action entry; avoid dual-button state conflicts.
 
 ---
 
-## 8) 验证与交付规则
+## 6) Data & Robustness Rules
 
-### 8.1 必做校验
+### 6.1 Input Tolerance & Field Fallback
 
-- 后端改动：至少做目标接口/流程级验证。
-- 前端改动：至少做关键路径交互验证（加载、提交、错误分支）。
-- 工作流相关改动：必须验证 parse/validate/run 的完整链路。
+- Event payloads and node inputs must do defensive handling of required fields.
+- Allow "multi-layer fallback parsing" for key fields to avoid a `None` breaking the whole chain.
 
-### 8.2 变更说明
+### 6.2 Transactions & Exception Boundaries
 
-- 交付说明必须包含：改动范围、行为变化、已验证内容、已知限制。
-- 如果存在暂未解决的边界问题，必须显式标注，不得隐藏。
+- Failures must be rollback-able; no half-success dirty states.
+- For degradable features (e.g. non-critical linkage), you may catch exceptions, but must log structured logs.
 
 ---
 
-## 9) 决策优先级（冲突时）
+## 7) Coding & Change Rules
 
-当多个方案都能实现功能时，按以下优先级决策：
+### 7.1 Minimum-Change Principle
 
-1. 破坏性最小
-2. 复用性最高
-3. 校验链最完整
-4. 用户体验最一致
-5. 实现复杂度适中
+- Only change files and logic related to the goal.
+- No unrelated refactors, unrelated renames, or unrelated formatting noise.
 
-若以上无法兼顾，先保证正确性与可维护性，再优化体验。
+### 7.2 Encoding & File Safety
+
+- Text files uniformly use UTF-8.
+- Do not rewrite a whole file without confirming the encoding; prefer local patches.
+
+### 7.3 Forbidden Anti-Patterns
+
+The following are forbidden:
+
+- Copy-pasting isomorphic logic for "speed" (front/back end, between modules)
+- Maintaining the same business rule in multiple places
+- Replacing formal back-end validation with a front-end temporary string rule
+- Exposing procedural debug switches long-term to users without product meaning
+
+---
+
+## 8) Validation & Delivery Rules
+
+### 8.1 Required Validation
+
+- Back-end changes: at least do target-API/flow-level verification.
+- Front-end changes: at least do key-path interaction verification (load, submit, error branches).
+- Workflow-related changes: must verify the full parse/validate/run chain.
+
+### 8.2 Change Notes
+
+- Delivery notes must include: change scope, behavior changes, verified content, known limitations.
+- If there are unresolved edge issues, they must be explicitly marked, not hidden.
+
+---
+
+## 9) Decision Priority (on Conflict)
+
+When multiple solutions can implement a feature, decide by the following priority:
+
+1. Least destructive
+2. Highest reusability
+3. Most complete validation chain
+4. Most consistent UX
+5. Moderate implementation complexity
+
+If the above can't all be met, ensure correctness and maintainability first, then optimize experience.
