@@ -554,19 +554,6 @@ npm run dev
   - Do not directly edit "built-in" resources.
   - For customization, create a copy (copy the knowledge base/prompt/workflow and rename it) and edit the copy. This way, even if `BOOTSTRAP_OVERWRITE=true` later, your custom copy will not be overwritten by the update logic.
 
-
-### Option 2: Use a release (quick start)
-
-Releases are packaged periodically; no dev environment needed, ready to use.
-
-1.  Go to the project's **Releases** page and download the latest portable archive (`.zip` or `.7z`).
-2.  Extract to any location.
-3.  **(Important)** Before running, ensure the database instance in Neo4j Desktop is started.
-4.  Enter the extracted folder, find the `backend` directory, and edit the `.env` file to configure the database connection as needed.
-5.  Run `backend/NovelForgeBackend.exe` to start the backend service.
-6.  Go back one level and run `NovelForge.exe` to start the main program.
-
-> Most data is stored in the backend/novelforge.db database. When updating/migrating versions, just copy that DB file to the corresponding location.
 ---
 
 ## ✍️ Creation Workflow
