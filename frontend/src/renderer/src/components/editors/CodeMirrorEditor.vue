@@ -1506,7 +1506,7 @@ const localCard = reactive({
 		content: typeof (props.chapter as any)?.content === 'string'
 			? (props.chapter as any).content
 			: (typeof (props.card.content as any)?.content === 'string' ? (props.card.content as any).content : ''),
-		word_count: typeof (props.chapter as any)?.content === 'string' ? ((props.chapter as any).content as string).length : (typeof (props.card.content as any)?.word_count === 'number' ? (props.card.content as any).word_count : 0),
+		word_count: typeof (props.chapter as any)?.content === 'string' ? computeWordCount((props.chapter as any).content as string) : (typeof (props.card.content as any)?.word_count === 'number' ? (props.card.content as any).word_count : 0),
 		volume_number: (props.chapter as any)?.volume_number ?? ((props.contextParams as any)?.volume_number ?? ((props.card.content as any)?.volume_number ?? undefined)),
 		chapter_number: (props.chapter as any)?.chapter_number ?? ((props.contextParams as any)?.chapter_number ?? ((props.card.content as any)?.chapter_number ?? undefined)),
 		title: (props.chapter as any)?.title ?? ((props.card.content as any)?.title ?? props.card.title ?? ''),
@@ -1611,7 +1611,7 @@ watch(() => props.card?.content, (newContent) => {
 			content: currentText,
 			word_count: typeof (newContent as any)?.word_count === 'number'
 				? (newContent as any).word_count
-				: currentText.length,
+				: computeWordCount(currentText),
 		}
 
 		// Only update when the content actually differs and the change was not triggered by the current editor's save
@@ -1626,7 +1626,7 @@ watch(() => props.card?.content, (newContent) => {
 			localCard.content = {
 				...syncedContent,
 				content: newText,
-				word_count: newText.length
+				word_count: computeWordCount(newText)
 			}
 
 			// Update the original content reference (avoid triggering dirty)
@@ -1671,7 +1671,7 @@ watch(() => props.chapter, (ch) => {
 	localCard.content = {
 		...(localCard.content || {}),
 		content: text,
-		word_count: typeof c.content === 'string' ? c.content.length : (localCard.content as any)?.word_count || 0,
+		word_count: typeof c.content === 'string' ? computeWordCount(c.content) : (localCard.content as any)?.word_count || 0,
 		volume_number: c.volume_number ?? (localCard.content as any)?.volume_number,
 		chapter_number: c.chapter_number ?? (localCard.content as any)?.chapter_number,
 		title: c.title ?? (localCard.content as any)?.title ?? props.card.title,
@@ -1681,7 +1681,11 @@ watch(() => props.chapter, (ch) => {
 }, { deep: true })
 
 function computeWordCount(text: string): number {
-	return (text || '').replace(/\s+/g, '').length
+	// Word counting: split on whitespace runs and count the resulting tokens.
+	// (Previously this counted non-whitespace characters.)
+	const trimmed = (text || '').trim()
+	if (!trimmed) return 0
+	return trimmed.split(/\s+/).length
 }
 
 const wordCount = ref(0)

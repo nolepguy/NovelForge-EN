@@ -37,7 +37,14 @@ class ContinuationTrimResult:
 
 
 def count_text_units(text: str | None) -> int:
-    return len("".join((text or "").split()))
+    # Word counting: count whitespace-delimited tokens.
+    # str.split() with no args splits on any whitespace run and discards
+    # leading/trailing empty strings, so len(...) yields the word count.
+    # (Previously this returned the non-whitespace character count via
+    # len("".join((text or "").split())).)
+    if not text:
+        return 0
+    return len(text.split())
 
 
 def normalize_word_control_mode(request: ContinuationRequest) -> str:
@@ -246,26 +253,44 @@ def _resolve_round_hard_limit(
 
 
 def _find_sentence_cut(text: str, limit_units: int) -> Optional[int]:
-    units = 0
+    # Count whitespace-delimited words incrementally (a new word begins at the
+    # first non-space char following a space). This keeps cut-finding consistent
+    # with count_text_units, which now counts words rather than characters.
+    words = 0
+    in_word = False
     sentence_cut: Optional[int] = None
     for idx, char in enumerate(text):
-        if not char.isspace():
-            units += 1
-        if char in _SENTENCE_ENDINGS and units <= limit_units:
+        if char.isspace():
+            in_word = False
+        elif not in_word:
+            words += 1
+            in_word = True
+        if char in _SENTENCE_ENDINGS and words <= limit_units:
             sentence_cut = idx + 1
-        if units > limit_units:
+        if words > limit_units:
             break
     return sentence_cut
 
 
 def _find_hard_cut(text: str, limit_units: int) -> Optional[int]:
-    units = 0
+    # Word-based hard cut: return the index at the start of the
+    # (limit_units + 1)-th word so that text[:idx] contains the first
+    # limit_units complete words (plus any trailing whitespace, which the
+    # caller strips). If the text has limit_units or fewer words, return the
+    # whole text length.
+    if not text:
+        return None
+    words = 0
+    in_word = False
     for idx, char in enumerate(text):
-        if not char.isspace():
-            units += 1
-        if units >= limit_units:
-            return idx + 1
-    return len(text) if text else None
+        if char.isspace():
+            in_word = False
+        elif not in_word:
+            words += 1
+            in_word = True
+            if words > limit_units:
+                return idx
+    return len(text)
 
 
 def _clamp(value: int, minimum: int, maximum: int) -> int:

@@ -60,9 +60,11 @@ const modeOptions = [
 const textContent = ref('')
 const originalContent = ref('')
 const charCount = computed(() => {
-  const text = textContent.value || ''
-  const normalized = text.replace(/\s+/g, '')
-  return normalized.length
+  // Word counting: split on whitespace runs and count the resulting tokens.
+  // (Previously this counted non-whitespace characters.)
+  const trimmed = (textContent.value || '').trim()
+  if (!trimmed) return 0
+  return trimmed.split(/\s+/).length
 })
 
 function extractText(content: any): string {

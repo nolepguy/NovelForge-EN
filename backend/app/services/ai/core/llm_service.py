@@ -602,14 +602,22 @@ def _find_first_sentence_boundary(text: str) -> int | None:
 
 
 def _take_text_by_units(text: str, limit_units: int) -> str:
-    if limit_units <= 0:
+    # Word-based take: emit up to limit_units whitespace-delimited words,
+    # preserving original spacing. A new word begins at the first non-space
+    # char following a space; once we start the (limit_units + 1)-th word we
+    # stop appending. This stays consistent with count_text_units (word count).
+    if limit_units <= 0 or not text:
         return ""
-    units = 0
+    words = 0
+    in_word = False
     out_chars: list[str] = []
     for char in text:
-        if not char.isspace():
-            units += 1
-        if units > limit_units:
-            break
+        if char.isspace():
+            in_word = False
+        elif not in_word:
+            words += 1
+            in_word = True
+            if words > limit_units:
+                break
         out_chars.append(char)
     return "".join(out_chars).rstrip()
