@@ -454,19 +454,66 @@ The project now uses SQLite by default to implement relationship-graph storage, 
 
 ### Option 1: Run from source (developer / latest features) (non-developers should use Option 2)
 
+#### Prerequisites
+
+- **Python 3.11+** on PATH
+- **Node.js 18+** and npm
+- (Optional) **Neo4j Desktop 5.16+** — only if you prefer Neo4j over the default SQLite relationship store
+
+#### Quick start (Windows, recommended)
+
+Three batch scripts at the repository root handle everything:
+
+1. **Install dependencies** (run once, or after pulling updates that change `requirements.txt` / `package.json`):
+
+   Double-click **`install.bat`**, or in a terminal:
+   ```bat
+   install.bat
+   ```
+   This will:
+   - Create a Python virtual environment at `backend/venv` (if it does not already exist)
+   - Upgrade `pip` and install all backend dependencies from `backend/requirements.txt` into that venv
+   - Run `npm install` inside `frontend/`
+
+2. **Start the backend** (FastAPI on port 54321):
+
+   Double-click **`run-backend.bat`**, or:
+   ```bat
+   run-backend.bat
+   ```
+   This launches `backend/main.py` using `backend/venv`'s `python.exe`.
+
+3. **Start the frontend** (Electron dev server):
+
+   Wait a few seconds for the backend to finish starting, then double-click **`run-frontend.bat`**, or:
+   ```bat
+   run-frontend.bat
+   ```
+   This runs `npm run dev` inside `frontend/`.
+
+> Each script opens its own window. Close the corresponding window to stop that service.
+
+#### Manual setup (cross-platform)
+
 **1. Backend (Python / FastAPI)**
 ```bash
 # Clone the repo
 git clone https://github.com/nolepguy/NovelForge-EN.git
 cd NovelForge-EN/backend
 
-conda create -n NovelForge python=3.11
-conda activate NovelForge
+# Create and activate a virtual environment (Python 3.11+)
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+# source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-Rename backend/.env.example to .env
+# Copy the example env file and edit if needed
+copy .env.example .env      # Windows
+# cp .env.example .env      # macOS/Linux
 
 # Run the backend service
 python main.py
@@ -483,10 +530,10 @@ npm install
 # Start the dev server
 npm run dev
 # You can also start the web page with the following command
-// npm run dev:web
+# npm run dev:web
 ```
 
-**3. One command to start both front and back end (npm)**
+**3. One command to start both front and back end (npm, from repo root)**
 ```bash
 npm run dev
 ```
@@ -805,7 +852,11 @@ Please comply with the open-source license terms and obtain the corresponding au
 
 ```
 NovelForge/
+  ├── install.bat         # Create backend venv + install backend/frontend deps (Windows)
+  ├── run-backend.bat     # Start the backend using backend/venv (Windows)
+  ├── run-frontend.bat    # Start the Electron dev server (Windows)
   ├── backend/        # FastAPI backend
+  │   ├── venv/            # Python virtual environment (created by install.bat)
   │   ├── app/
   │   │   ├── api/        # API routes
   │   │   ├── db/         # DB models and sessions
